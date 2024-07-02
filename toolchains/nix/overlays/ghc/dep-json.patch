@@ -1,0 +1,425 @@
+commit 43280040f168dd83b25cf3ce0160086f1ea0de98
+Author: Cheng Shao <terrorjack@type.dance>
+Date:   Wed Mar 6 19:39:56 2024 +0000
+
+    driver: add -dep-json -opt-json flags to ghc -M
+    
+    Note: adapted from https://gitlab.haskell.org/ghc/ghc/-/merge_requests/11994 for GHC 9.6.3.
+
+diff --git a/compiler/GHC/Driver/Backpack.hs b/compiler/GHC/Driver/Backpack.hs
+index 042d0fe021..2ddf91c72d 100644
+--- a/compiler/GHC/Driver/Backpack.hs
++++ b/compiler/GHC/Driver/Backpack.hs
+@@ -795,6 +795,7 @@ summariseRequirement pn mod_name = do
+         ms_hie_date = hie_timestamp,
+         ms_srcimps = [],
+         ms_textual_imps = ((,) NoPkgQual . noLoc) <$> extra_sig_imports,
++        ms_opts = [],
+         ms_ghc_prim_import = False,
+         ms_parsed_mod = Just (HsParsedModule {
+                 hpm_module = L loc (HsModule {
+@@ -910,6 +911,7 @@ hsModuleToModSummary home_keys pn hsc_src modname
+                            -- extra imports
+                            ++ ((,) NoPkgQual . noLoc <$> extra_sig_imports)
+                            ++ ((,) NoPkgQual . noLoc <$> implicit_sigs),
++            ms_opts = [],
+             -- This is our hack to get the parse tree to the right spot
+             ms_parsed_mod = Just (HsParsedModule {
+                     hpm_module = hsmod,
+diff --git a/compiler/GHC/Driver/Make.hs b/compiler/GHC/Driver/Make.hs
+index 945d6b203c..df2f788a2a 100644
+--- a/compiler/GHC/Driver/Make.hs
++++ b/compiler/GHC/Driver/Make.hs
+@@ -2030,6 +2030,7 @@ summariseFile hsc_env' home_unit old_summaries src_fn mb_phase maybe_buf
+             , nms_location = location
+             , nms_mod = mod
+             , nms_preimps = preimps
++            , nms_opts = pi_mod_opts
+             }
+ 
+ checkSummaryHash
+@@ -2199,6 +2200,7 @@ summariseModule hsc_env' home_unit old_summary_map is_boot (L _ wanted_mod) mb_p
+             , nms_location = location
+             , nms_mod = mod
+             , nms_preimps = preimps
++            , nms_opts = pi_mod_opts
+             }
+ 
+ -- | Convenience named arguments for 'makeNewModSummary' only used to make
+@@ -2212,6 +2214,7 @@ data MakeNewModSummary
+       , nms_location :: ModLocation
+       , nms_mod :: Module
+       , nms_preimps :: PreprocessedImports
++      , nms_opts :: ![String]
+       }
+ 
+ makeNewModSummary :: HscEnv -> MakeNewModSummary -> IO ModSummary
+@@ -2240,6 +2243,7 @@ makeNewModSummary hsc_env MakeNewModSummary{..} = do
+             ((,) NoPkgQual . noLoc <$> extra_sig_imports) ++
+             ((,) NoPkgQual . noLoc <$> implicit_sigs) ++
+             pi_theimps
++        , ms_opts = nms_opts
+         , ms_hs_hash = nms_src_hash
+         , ms_iface_date = hi_timestamp
+         , ms_hie_date = hie_timestamp
+@@ -2257,6 +2261,7 @@ data PreprocessedImports
+       , pi_hspp_buf :: StringBuffer
+       , pi_mod_name_loc :: SrcSpan
+       , pi_mod_name :: ModuleName
++      , pi_mod_opts :: ![String]
+       }
+ 
+ -- Preprocess the source file and get its imports
+@@ -2272,12 +2277,13 @@ getPreprocessedImports hsc_env src_fn mb_phase maybe_buf = do
+   (pi_local_dflags, pi_hspp_fn)
+       <- ExceptT $ preprocess hsc_env src_fn (fst <$> maybe_buf) mb_phase
+   pi_hspp_buf <- liftIO $ hGetStringBuffer pi_hspp_fn
+-  (pi_srcimps', pi_theimps', pi_ghc_prim_import, L pi_mod_name_loc pi_mod_name)
++  ((pi_srcimps', pi_theimps', pi_ghc_prim_import, L pi_mod_name_loc pi_mod_name), pi_mod_opts)
+       <- ExceptT $ do
+           let imp_prelude = xopt LangExt.ImplicitPrelude pi_local_dflags
+               popts = initParserOpts pi_local_dflags
+           mimps <- getImports popts imp_prelude pi_hspp_buf pi_hspp_fn src_fn
+-          return (first (mkMessages . fmap mkDriverPsHeaderMessage . getMessages) mimps)
++          let mopts = map unLoc $ snd $ getOptions popts pi_hspp_buf src_fn
++          pure $ ((, mopts) <$>) $ first (mkMessages . fmap mkDriverPsHeaderMessage . getMessages) mimps
+   let rn_pkg_qual = renameRawPkgQual (hsc_unit_env hsc_env)
+   let rn_imps = fmap (\(pk, lmn@(L _ mn)) -> (rn_pkg_qual mn pk, lmn))
+   let pi_srcimps = rn_imps pi_srcimps'
+diff --git a/compiler/GHC/Driver/MakeFile.hs b/compiler/GHC/Driver/MakeFile.hs
+index a770637311..b875225692 100644
+--- a/compiler/GHC/Driver/MakeFile.hs
++++ b/compiler/GHC/Driver/MakeFile.hs
+@@ -16,9 +16,11 @@ where
+ import GHC.Prelude
+ 
+ import qualified GHC
++import GHC.Data.Maybe
+ import GHC.Driver.Monad
+ import GHC.Driver.Session
+ import GHC.Driver.Ppr
++import GHC.Driver.MakeFile.JSON
+ import GHC.Utils.Misc
+ import GHC.Driver.Env
+ import GHC.Driver.Errors.Types
+@@ -50,7 +52,7 @@ import System.FilePath
+ import System.IO
+ import System.IO.Error  ( isEOFError )
+ import Control.Monad    ( when, forM_ )
+-import Data.Maybe       ( isJust )
++import Data.Functor
+ import Data.IORef
+ import qualified Data.Set as Set
+ 
+@@ -105,7 +107,7 @@ doMkDependHS srcs = do
+     -- and complaining about cycles
+     hsc_env <- getSession
+     root <- liftIO getCurrentDirectory
+-    mapM_ (liftIO . processDeps dflags hsc_env excl_mods root (mkd_tmp_hdl files)) sorted
++    mapM_ (liftIO . processDeps dflags hsc_env excl_mods root (mkd_tmp_hdl files) (mkd_dep_json_file files $> mkd_dep_json_ref files) (mkd_opt_json_file files $> mkd_opt_json_ref files)) sorted
+ 
+     -- If -ddump-mod-cycles, show cycles in the module graph
+     liftIO $ dumpModCycles logger module_graph
+@@ -132,6 +134,10 @@ doMkDependHS srcs = do
+ data MkDepFiles
+   = MkDep { mkd_make_file :: FilePath,          -- Name of the makefile
+             mkd_make_hdl  :: Maybe Handle,      -- Handle for the open makefile
++            mkd_dep_json_file :: !(Maybe FilePath), -- Name of the -dep-json file
++            mkd_dep_json_ref  :: !(IORef DepJSON),  -- Dependencies recorded so far
++            mkd_opt_json_file :: !(Maybe FilePath), -- Name of the -opt-json file
++            mkd_opt_json_ref  :: !(IORef OptJSON),  -- File options recorded so far
+             mkd_tmp_file  :: FilePath,          -- Name of the temporary file
+             mkd_tmp_hdl   :: Handle }           -- Handle of the open temporary file
+ 
+@@ -174,11 +180,18 @@ beginMkDependHS logger tmpfs dflags = do
+ 
+            return (Just makefile_hdl)
+ 
++  dep_json_ref <- initDepJSON
++
++  opt_json_ref <- initOptJSON
+ 
+         -- write the magic marker into the tmp file
+   hPutStrLn tmp_hdl depStartMarker
+ 
+   return (MkDep { mkd_make_file = makefile, mkd_make_hdl = mb_make_hdl,
++                  mkd_dep_json_file = depJSON dflags,
++                  mkd_dep_json_ref  = dep_json_ref,
++                  mkd_opt_json_file = optJSON dflags,
++                  mkd_opt_json_ref = opt_json_ref,
+                   mkd_tmp_file  = tmp_file, mkd_tmp_hdl  = tmp_hdl})
+ 
+ 
+@@ -193,6 +206,8 @@ processDeps :: DynFlags
+             -> [ModuleName]
+             -> FilePath
+             -> Handle           -- Write dependencies to here
++            -> Maybe (IORef DepJSON)
++            -> Maybe (IORef OptJSON)
+             -> SCC ModuleGraphNode
+             -> IO ()
+ -- Write suitable dependencies to handle
+@@ -210,20 +225,20 @@ processDeps :: DynFlags
+ --
+ -- For {-# SOURCE #-} imports the "hi" will be "hi-boot".
+ 
+-processDeps dflags _ _ _ _ (CyclicSCC nodes)
++processDeps dflags _ _ _ _ _ _ (CyclicSCC nodes)
+   =     -- There shouldn't be any cycles; report them
+     throwGhcExceptionIO $ ProgramError $
+       showSDoc dflags $ GHC.cyclicModuleErr nodes
+ 
+-processDeps dflags _ _ _ _ (AcyclicSCC (InstantiationNode _uid node))
++processDeps dflags _ _ _ _ _ _ (AcyclicSCC (InstantiationNode _uid node))
+   =     -- There shouldn't be any backpack instantiations; report them as well
+     throwGhcExceptionIO $ ProgramError $
+       showSDoc dflags $
+         vcat [ text "Unexpected backpack instantiation in dependency graph while constructing Makefile:"
+              , nest 2 $ ppr node ]
+-processDeps _dflags _ _ _ _ (AcyclicSCC (LinkNode {})) = return ()
++processDeps _dflags _ _ _ _ _ _ (AcyclicSCC (LinkNode {})) = return ()
+ 
+-processDeps dflags hsc_env excl_mods root hdl (AcyclicSCC (ModuleNode _ node))
++processDeps dflags hsc_env excl_mods root hdl m_dep_json_ref m_opt_json_ref (AcyclicSCC (ModuleNode _ node))
+   = do  { let extra_suffixes = depSuffixes dflags
+               include_pkg_deps = depIncludePkgDeps dflags
+               src_file  = msHsFilePath node
+@@ -237,17 +252,18 @@ processDeps dflags hsc_env excl_mods root hdl (AcyclicSCC (ModuleNode _ node))
+                            Nothing      -> return () ;
+                            Just hi_file -> do
+                      { let hi_files = insertSuffixes hi_file extra_suffixes
+-                           write_dep (obj,hi) = writeDependency root hdl [obj] hi
++                           write_dep (obj,hi) = writeDependency root hdl m_dep_json_ref [obj] hi
+ 
+                         -- Add one dependency for each suffix;
+                         -- e.g.         A.o   : B.hi
+                         --              A.x_o : B.x_hi
+                      ; mapM_ write_dep (obj_files `zip` hi_files) }}}
+ 
++        ; whenIsJust m_opt_json_ref $ \ref -> updateOptJSON ref src_file $ ms_opts node
+ 
+                 -- Emit std dependency of the object(s) on the source file
+                 -- Something like       A.o : A.hs
+-        ; writeDependency root hdl obj_files src_file
++        ; writeDependency root hdl m_dep_json_ref obj_files src_file
+ 
+           -- add dependency between objects and their corresponding .hi-boot
+           -- files if the module has a corresponding .hs-boot file (#14482)
+@@ -257,7 +273,7 @@ processDeps dflags hsc_env excl_mods root hdl (AcyclicSCC (ModuleNode _ node))
+             forM_ extra_suffixes $ \suff -> do
+                let way_obj     = insertSuffixes obj     [suff]
+                let way_hi_boot = insertSuffixes hi_boot [suff]
+-               mapM_ (writeDependency root hdl way_obj) way_hi_boot
++               mapM_ (writeDependency root hdl m_dep_json_ref way_obj) way_hi_boot
+ 
+                 -- Emit a dependency for each CPP import
+         ; when (depIncludeCppDeps dflags) $ do
+@@ -267,7 +283,7 @@ processDeps dflags hsc_env excl_mods root hdl (AcyclicSCC (ModuleNode _ node))
+             -- fails to parse, which may not be desirable (see #16616).
+           { session <- Session <$> newIORef hsc_env
+           ; parsedMod <- reflectGhc (GHC.parseModule node) session
+-          ; mapM_ (writeDependency root hdl obj_files)
++          ; mapM_ (writeDependency root hdl m_dep_json_ref obj_files)
+                   (GHC.pm_extra_src_files parsedMod)
+           }
+ 
+@@ -312,10 +328,10 @@ findDependency hsc_env srcloc pkg imp is_boot include_pkg_deps = do
+              cannotFindModule hsc_env imp fail
+ 
+ -----------------------------
+-writeDependency :: FilePath -> Handle -> [FilePath] -> FilePath -> IO ()
++writeDependency :: FilePath -> Handle -> Maybe (IORef DepJSON) -> [FilePath] -> FilePath -> IO ()
+ -- (writeDependency r h [t1,t2] dep) writes to handle h the dependency
+ --      t1 t2 : dep
+-writeDependency root hdl targets dep
++writeDependency root hdl m_dep_json_ref targets dep
+   = do let -- We need to avoid making deps on
+            --     c:/foo/...
+            -- on cygwin as make gets confused by the :
+@@ -324,6 +340,7 @@ writeDependency root hdl targets dep
+            forOutput = escapeSpaces . reslash Forwards . normalise
+            output = unwords (map forOutput targets) ++ " : " ++ forOutput dep'
+        hPutStrLn hdl output
++       whenIsJust m_dep_json_ref $ \ref -> updateDepJSON ref targets dep'
+ 
+ -----------------------------
+ insertSuffixes
+@@ -352,6 +369,8 @@ endMkDependHS :: Logger -> MkDepFiles -> IO ()
+ 
+ endMkDependHS logger
+    (MkDep { mkd_make_file = makefile, mkd_make_hdl =  makefile_hdl,
++            mkd_dep_json_file = mkd_dep_json_file, mkd_dep_json_ref = mkd_dep_json_ref,
++            mkd_opt_json_file = mkd_opt_json_file, mkd_opt_json_ref = mkd_opt_json_ref,
+             mkd_tmp_file  = tmp_file, mkd_tmp_hdl  =  tmp_hdl })
+   = do
+   -- write the magic marker into the tmp file
+@@ -375,6 +394,9 @@ endMkDependHS logger
+   showPass logger "Installing new makefile"
+   SysTools.copyFile tmp_file makefile
+ 
++  whenIsJust mkd_dep_json_file $ writeJSONFile mkd_dep_json_ref
++  whenIsJust mkd_opt_json_file $ writeJSONFile mkd_opt_json_ref
++
+ 
+ -----------------------------------------------------------------
+ --              Module cycles
+diff --git a/compiler/GHC/Driver/MakeFile/JSON.hs b/compiler/GHC/Driver/MakeFile/JSON.hs
+new file mode 100644
+index 0000000000..675a89e8e7
+--- /dev/null
++++ b/compiler/GHC/Driver/MakeFile/JSON.hs
+@@ -0,0 +1,67 @@
++module GHC.Driver.MakeFile.JSON
++  ( DepJSON,
++    initDepJSON,
++    updateDepJSON,
++    writeJSONFile,
++    OptJSON,
++    initOptJSON,
++    updateOptJSON,
++  )
++where
++
++import Data.IORef
++import qualified Data.Map.Strict as Map
++import qualified Data.Set as Set
++import GHC.Prelude
++import GHC.Utils.Json
++import GHC.Utils.Misc
++import GHC.Utils.Outputable
++import System.FilePath
++
++newtype DepJSON = DepJSON (Map.Map FilePath (Set.Set FilePath))
++
++instance ToJson DepJSON where
++  json (DepJSON m) =
++    JSObject
++      [ (target, JSArray [JSString dep | dep <- Set.toList deps])
++        | (target, deps) <- Map.toList m
++      ]
++
++initDepJSON :: IO (IORef DepJSON)
++initDepJSON = newIORef $ DepJSON Map.empty
++
++updateDepJSON :: IORef DepJSON -> [FilePath] -> FilePath -> IO ()
++updateDepJSON ref targets dep = modifyIORef' ref $ \(DepJSON m0) ->
++  DepJSON
++    $ foldl'
++      ( \acc target ->
++          Map.insertWith
++            Set.union
++            (normalise target)
++            (Set.singleton $ normalise dep)
++            acc
++      )
++      m0
++      targets
++
++writeJSONFile :: (ToJson a) => IORef a -> FilePath -> IO ()
++writeJSONFile ref p = do
++  dj <- readIORef ref
++  withAtomicRename p
++    $ \tmp -> writeFile tmp $ showSDocUnsafe $ renderJSON $ json dj
++
++newtype OptJSON = OptJSON (Map.Map FilePath [String])
++
++instance ToJson OptJSON where
++  json (OptJSON m) =
++    JSObject
++      [ (src_file, JSArray [JSString opt | opt <- opts])
++        | (src_file, opts) <- Map.toList m
++      ]
++
++initOptJSON :: IO (IORef OptJSON)
++initOptJSON = newIORef $ OptJSON Map.empty
++
++updateOptJSON :: IORef OptJSON -> FilePath -> [String] -> IO ()
++updateOptJSON ref src_file opts = modifyIORef' ref
++  $ \(OptJSON m0) -> OptJSON $ Map.insert (normalise src_file) opts m0
+diff --git a/compiler/GHC/Driver/Pipeline/Execute.hs b/compiler/GHC/Driver/Pipeline/Execute.hs
+index 7694975e80..165a6560f1 100644
+--- a/compiler/GHC/Driver/Pipeline/Execute.hs
++++ b/compiler/GHC/Driver/Pipeline/Execute.hs
+@@ -782,6 +782,7 @@ runHscPhase pipe_env hsc_env0 input_fn src_flavour = do
+                                 ms_hie_date     = hie_date,
+                                 ms_ghc_prim_import = ghc_prim_imp,
+                                 ms_textual_imps = imps,
++                                ms_opts         = [],
+                                 ms_srcimps      = src_imps }
+ 
+ 
+diff --git a/compiler/GHC/Driver/Session.hs b/compiler/GHC/Driver/Session.hs
+index fda4671d16..21da05f0e4 100644
+--- a/compiler/GHC/Driver/Session.hs
++++ b/compiler/GHC/Driver/Session.hs
+@@ -603,6 +603,8 @@ data DynFlags = DynFlags {
+   depIncludeCppDeps     :: Bool,
+   depExcludeMods        :: [ModuleName],
+   depSuffixes           :: [String],
++  depJSON               :: !(Maybe FilePath),
++  optJSON               :: !(Maybe FilePath),
+ 
+   --  Package flags
+   packageDBFlags        :: [PackageDBFlag],
+@@ -1225,6 +1227,8 @@ defaultDynFlags mySettings =
+         depIncludeCppDeps = False,
+         depExcludeMods    = [],
+         depSuffixes       = [],
++        depJSON           = Nothing,
++        optJSON           = Nothing,
+         -- end of ghc -M values
+         ghcVersionFile = Nothing,
+         haddockOptions = Nothing,
+@@ -1768,6 +1772,12 @@ addDepExcludeMod m d
+ addDepSuffix :: FilePath -> DynFlags -> DynFlags
+ addDepSuffix s d = d { depSuffixes = s : depSuffixes d }
+ 
++setDepJSON :: FilePath -> DynFlags -> DynFlags
++setDepJSON f d = d { depJSON = Just f }
++
++setOptJSON :: FilePath -> DynFlags -> DynFlags
++setOptJSON f d = d { optJSON = Just f }
++
+ addCmdlineFramework f d = d { cmdlineFrameworks = f : cmdlineFrameworks d}
+ 
+ addGhcVersionFile :: FilePath -> DynFlags -> DynFlags
+@@ -2206,6 +2216,8 @@ dynamic_flags_deps = [
+   , make_ord_flag defGhcFlag "include-pkg-deps"
+         (noArg (setDepIncludePkgDeps True))
+   , make_ord_flag defGhcFlag "exclude-module"          (hasArg addDepExcludeMod)
++  , make_ord_flag defGhcFlag "dep-json"                (hasArg setDepJSON)
++  , make_ord_flag defGhcFlag "opt-json"                (hasArg setOptJSON)
+ 
+         -------- Linking ----------------------------------------------------
+   , make_ord_flag defGhcFlag "no-link"
+diff --git a/compiler/GHC/Unit/Module/ModSummary.hs b/compiler/GHC/Unit/Module/ModSummary.hs
+index 35f52a5a3e..5632ab4161 100644
+--- a/compiler/GHC/Unit/Module/ModSummary.hs
++++ b/compiler/GHC/Unit/Module/ModSummary.hs
+@@ -75,6 +75,8 @@ data ModSummary
+           -- ^ Source imports of the module
+         ms_textual_imps :: [(PkgQual, Located ModuleName)],
+           -- ^ Non-source imports of the module from the module *text*
++        ms_opts         :: ![String],
++          -- ^ OPTIONS and LANGUAGE pragmas of the source file
+         ms_ghc_prim_import :: !Bool,
+           -- ^ Whether the special module GHC.Prim was imported explicitly
+         ms_parsed_mod   :: Maybe HsParsedModule,
+@@ -192,5 +194,3 @@ findTarget ms ts =
+         = f == f'  && ms_unitid summary == unitid
+     _ `matches` _
+         = False
+-
+-
+diff --git a/compiler/ghc.cabal.in b/compiler/ghc.cabal.in
+index 08e579c03a..113a6ec8df 100644
+--- a/compiler/ghc.cabal.in
++++ b/compiler/ghc.cabal.in
+@@ -438,6 +438,7 @@ Library
+         GHC.Driver.Main
+         GHC.Driver.Make
+         GHC.Driver.MakeFile
++        GHC.Driver.MakeFile.JSON
+         GHC.Driver.Monad
+         GHC.Driver.Phases
+         GHC.Driver.Pipeline

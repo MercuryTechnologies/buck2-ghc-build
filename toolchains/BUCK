@@ -1,0 +1,90 @@
+load(":nix_bash_toolchain.bzl", "nix_bash_genrule_toolchain")
+load(":nix_cxx_toolchain.bzl", "nix_cxx_toolchain")
+load(":nix_haskell_toolchain.bzl", "nix_haskell_toolchain")
+load(":nix_python_toolchain.bzl", "nix_python_bootstrap_toolchain")
+load(":ghci.bzl", "ghci")
+load("nix.bzl", "nix")
+
+python_bootstrap_binary(
+    name = "nix_drv_json",
+    main = "nix_drv_json.py",
+)
+
+nix_cxx_toolchain(
+    name = "cxx",
+    visibility = ["PUBLIC"],
+)
+
+export_file(
+    name = "ghci_script_template",
+    src = "ghci_script.tpl",
+    visibility = ["PUBLIC"],
+)
+
+export_file(
+    name = "ghci_iserv_template",
+    src = "ghci_iserv.tpl",
+    visibility = ["PUBLIC"],
+)
+
+nix_python_bootstrap_toolchain(
+    name = "python_bootstrap",
+    visibility = ["PUBLIC"],
+)
+
+nix_bash_genrule_toolchain(
+    name = "genrule",
+    visibility = ["PUBLIC"],
+)
+
+nix_haskell_toolchain(
+    name = "haskell",
+    visibility = ["PUBLIC"],
+    compiler_flags = [
+        "-fwrite-ide-info",
+    ],
+    flake = "nix",
+)
+
+ghci(
+    name = "ghci",
+    visibility = ["PUBLIC"],
+)
+
+################################################################################
+
+nix.rules.flake(
+    name = "bash",
+    binary = "bash",
+    flake = "nix",
+)
+
+nix.rules.flake(
+    name = "ghc",
+    binaries = [
+        "ghc-pkg",
+    ],
+    binary = "ghc",
+    flake = "nix",
+)
+
+nix.rules.flake(
+    name = "nix_cxx",
+    package = "cxx",
+    flake = "nix",
+    binaries = ["ar", "cc", "c++", "nm", "objcopy", "ranlib", "strip"],
+)
+
+nix.rules.flake(
+    name = "haddock",
+    flake = "nix",
+    binary = "haddock",
+)
+
+nix.rules.flake(
+    name = "python",
+    flake = "nix",
+    binary = "python",
+)
+
+################################################################################

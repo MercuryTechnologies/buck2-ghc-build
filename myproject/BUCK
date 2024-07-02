@@ -1,0 +1,10 @@
+[
+    alias(
+         name = pkg,
+         actual = "//myproject/" + pkg + "/src:lib",
+         visibility = ["//..."],
+    )
+    for pkg in [
+         "pkg-a",
+    ]
+]
