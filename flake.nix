@@ -1,5 +1,5 @@
 {
-  description = "Mercury Culture Web Backend";
+  description = "Buck2 project template supporting both nix-based GHC env and custom GHC HEAD";
   inputs = {
     nixpkgs.url = "github:MercuryTechnologies/nixpkgs/ghc962";
     flake-utils.url = "github:numtide/flake-utils";

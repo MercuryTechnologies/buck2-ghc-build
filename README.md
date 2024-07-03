@@ -1,3 +1,7 @@
+# buck2-ghcHEAD
+
+Buck2 project template supporting both nix-based GHC env and custom GHC HEAD.
+
 ## Enter the Nix shell
 
 ```
