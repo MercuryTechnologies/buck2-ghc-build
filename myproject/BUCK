@@ -6,5 +6,6 @@
     )
     for pkg in [
          "pkg-a",
+         "pkg-b",
     ]
 ]
