@@ -1,6 +1,6 @@
 module B.NewHello where
 
--- import Data.Aeson ()
+import Data.Aeson ()
 -- import Data.IntMap ()
 import Hello (hello)
 import Prelude (IO, putStrLn)

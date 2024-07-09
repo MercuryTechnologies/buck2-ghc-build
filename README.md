@@ -1,18 +1,34 @@
 # buck2-ghcHEAD
 
-Buck2 project template supporting both nix-based GHC env and custom GHC HEAD.
+Buck2 project template supporting both nix-based GHC env and custom.
 
-## Enter the Nix shell
+## Getting started
 
+This build template supports two build toolchain. One is GHC compiler and libraries configured via Nix,
+and the other is those prepared externally (custom GHC). For the latter, the environment variables `GHC`, `GHC_PATH`
+and `GHC_PKG_DB` are used for specifying the locations of external tools and package configuration.
+
+For nix-based GHC mode, enter the shell by
 ```
-$ nix develop .#buck2
+$ nix develop .#buck2-nix
 ```
 
+For custom GHC mode, enter the shell by
+```
+$ nix develop .#buck2-ghcHEAD
+```
+and set the environmental variables. For example,
+```
+$ export GHC_PATH=/nix/store/943sxl4vcfpfg6xaagxvgwbgz9scl7lc-coreutils-9.3/bin:/nix/store/m488d5iwzn93bdk1j5gxl77k3zb8y285-cctools-binutils-darwin-wrapper-11.1.0-973.0.1/bin:/nix/store/n6s41h0vwcllawzpxbmhxkbla4lhj9va-cctools-llvm-11.1.0-973.0.1/bin
+$ export GHC=~/repo/srcc/ghcHEAD/_build/stage1/bin/ghc
+$ export GHC_PKG_DB=~/.local/state/cabal/store/ghc-9.11.20240625/package.db
+```
+Note that one can specify multiple `package.db` locations by colon-separated list in the `GHC_PKG_DB` variable.
 
 ## Build
 
 ```
-$ buck2 build ...
+$ buck2 build //myproject:pkg-b[static]
 ```
 
 To build a specific target and show which output was generated for it
