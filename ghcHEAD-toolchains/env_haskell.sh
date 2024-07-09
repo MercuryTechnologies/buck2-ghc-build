@@ -24,7 +24,7 @@ check_executable() {
 }
 
 error() {
-    echo 'Failed to discover the external Haskell compiler. Be sure to enter `nix develop .#buck2` and check that `$GHC_PATH`, `$GHC` and `$GHC_PKG_DB` are set.' >&2
+    echo 'Failed to discover the external Haskell compiler. Be sure to enter `nix develop .#buck2` and check that `$GHC_PATH`, `$GHC`, `$GHC_PKG_DB` and `$GHC_EXTRA_OPTS` are set.' >&2
 }
 
 trap error ERR
@@ -36,6 +36,8 @@ IFS=":" read -r -a ghc_pkg_db <<< "$(check_env_var GHC_PKG_DB)"
 
 ghc_pkg="$(dirname "$ghc")/ghc-pkg"
 haddock="$(dirname "$ghc")/haddock"
+
+extra_opts="$(check_env_var GHC_EXTRA_OPTS)"
 
 check_executable "$ghc"
 check_executable "$ghc_pkg"
@@ -70,7 +72,7 @@ make_ghc_wrapper() {
 #!$BASH
 set -euo pipefail
 export PATH="$path:\$PATH"
-exec "$orig" "$dbstr" "\$@"
+exec "$orig" "$dbstr" "$extra_opts" "\$@"
 EOF
     chmod +x "$wrapper"
 }

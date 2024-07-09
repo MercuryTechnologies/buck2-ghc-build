@@ -5,8 +5,8 @@ Buck2 project template supporting both nix-based GHC env and custom.
 ## Getting started
 
 This build template supports two build toolchain. One is GHC compiler and libraries configured via Nix,
-and the other is those prepared externally (custom GHC). For the latter, the environment variables `GHC`, `GHC_PATH`
-and `GHC_PKG_DB` are used for specifying the locations of external tools and package configuration.
+and the other is those prepared externally (custom GHC). For the latter, the environment variables `GHC`, `GHC_PATH`,
+`GHC_PKG_DB` and `GHC_EXTRA_OPTS` are used for specifying the locations of external tools and package configuration.
 
 For nix-based GHC mode, enter the shell by
 ```
@@ -22,6 +22,7 @@ and set the environmental variables. For example,
 $ export GHC_PATH=/nix/store/943sxl4vcfpfg6xaagxvgwbgz9scl7lc-coreutils-9.3/bin:/nix/store/m488d5iwzn93bdk1j5gxl77k3zb8y285-cctools-binutils-darwin-wrapper-11.1.0-973.0.1/bin:/nix/store/n6s41h0vwcllawzpxbmhxkbla4lhj9va-cctools-llvm-11.1.0-973.0.1/bin
 $ export GHC=~/repo/srcc/ghcHEAD/_build/stage1/bin/ghc
 $ export GHC_PKG_DB=~/.local/state/cabal/store/ghc-9.11.20240625/package.db
+$ export GHC_EXTRA_OPTS="-L/nix/store/cmxms1ix9ki9n5x7wkgilrhbcq97b48z-gmp-with-cxx-6.3.0/lib"
 ```
 Note that one can specify multiple `package.db` locations by colon-separated list in the `GHC_PKG_DB` variable.
 
