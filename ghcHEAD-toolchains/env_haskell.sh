@@ -32,12 +32,11 @@ trap error ERR
 path="$(check_env_var GHC_PATH)"
 ghc="$(check_env_var GHC)"
 
-IFS=":" read -r -a ghc_pkg_db <<< "$(check_env_var GHC_PKG_DB)"
-
 ghc_pkg="$(dirname "$ghc")/ghc-pkg"
 haddock="$(dirname "$ghc")/haddock"
 
-extra_opts="$(check_env_var GHC_EXTRA_OPTS)"
+IFS=":" read -r -a ghc_pkg_db <<< "$(check_env_var GHC_PKG_DB)"
+IFS=":" read -r -a ghc_extra_opts <<< "$(check_env_var GHC_EXTRA_OPTS)"
 
 check_executable "$ghc"
 check_executable "$ghc_pkg"
@@ -62,17 +61,22 @@ EOF
 make_ghc_wrapper() {
     local orig="$1"
     local wrapper="$2"
-    local dbstr=""
+    local dbstr=()
     for db in "${ghc_pkg_db[@]}"
     do
-       dbstr+="-package-db $db "
+        dbstr+=('-package-db')
+        dbstr+=("'$db'")
     done
-    #return 1
+    local optstr=()
+    for opt in "${ghc_extra_opts[@]}"
+    do
+        optstr+=("'$opt'")
+    done
     cat >"$wrapper" <<EOF
 #!$BASH
 set -euo pipefail
 export PATH="$path:\$PATH"
-exec "$orig" "$dbstr" "$extra_opts" "\$@"
+exec "$orig" ${dbstr[@]} ${optstr[@]} "\$@"
 EOF
     chmod +x "$wrapper"
 }

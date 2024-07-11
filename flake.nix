@@ -90,9 +90,6 @@
           ]);
 
           shellHook = ''
-            # Haskell toolchain
-            #export GHC=${ghcWithPackages}/bin/ghc
-            #
             export PS1="\n[buck2-ghcHEAD:\w]$ \0"
           '';
         };

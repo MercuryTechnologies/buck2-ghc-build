@@ -18,9 +18,6 @@
             allowBroken = true;
           };
         };
-        lib = pkgs.lib;
-        compilerName = import ./compiler.nix;
-        hsPkgs = pkgs.haskell.packages.${compilerName};
         buck2BuildInputs = [
           pkgs.bash
           pkgs.coreutils
@@ -42,7 +39,7 @@
           dockerImage =
             let
               inherit (pkgs) dockerTools;
-              inherit (self.packages.${system}) bash ghc cxx python;
+              inherit (self.packages.${system}) bash cxx python;
             in
             dockerTools.streamNixShellImage {
               name = "nix-build";
