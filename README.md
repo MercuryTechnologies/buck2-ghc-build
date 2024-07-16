@@ -23,9 +23,10 @@ $ export GHC_PATH=/nix/store/943sxl4vcfpfg6xaagxvgwbgz9scl7lc-coreutils-9.3/bin:
 $ export GHC=~/repo/srcc/ghcHEAD/_build/stage1/bin/ghc
 $ export GHC_PKG_DB=~/.local/state/cabal/store/ghc-9.11.20240625/package.db
 $ export GHC_EXTRA_OPTS="-L/nix/store/cmxms1ix9ki9n5x7wkgilrhbcq97b48z-gmp-with-cxx-6.3.0/lib"
+$ export GHC_LD_LIBRARY_PATH="/nix/store/cmxms1ix9ki9n5x7wkgilrhbcq97b48z-gmp-with-cxx-6.3.0/lib"
 ```
 Note that one can specify multiple `package.db` locations by a colon-separated list in the `GHC_PKG_DB` variable.
-`GHC_EXTRA_OPTS` variable is also a colon-separated list.
+`GHC_EXTRA_OPTS` and `GHC_LD_LIBRARY_PATH` are also colon-separated lists.
 
 ## Build
 
