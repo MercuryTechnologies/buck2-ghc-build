@@ -22,6 +22,22 @@ let
     revision = null;
   });
 
+  # create a package db for each haskell library individually for buck2
+  overlay-make-pkg-db = hself: hsuper:
+    let
+      mkPkgDb = overrideCabal
+        (drv: {
+          postInstall = (drv.postInstall or "") + ''ghc-pkg recache --package-db $packageConfDir'';
+        });
+    in
+    self.pkgs.lib.attrsets.mapAttrs
+      (_: value:
+        if value ? isHaskellLibrary then
+          mkPkgDb value
+        else value
+      )
+      hsuper;
+
   ### Choosing a Hackage Version ###
   #
   # Add a `package-name = "A.B.X.Y";` line in this record to select a Hackage
@@ -119,7 +135,7 @@ in
             self.lib.fold
               self.lib.composeExtensions
               (prev.overrides or (_: _: { }))
-              [ overlay-packageSourceOverrides (haskell-overlay self super) ];
+              [ overlay-packageSourceOverrides (haskell-overlay self super) overlay-make-pkg-db ];
         });
     };
   };

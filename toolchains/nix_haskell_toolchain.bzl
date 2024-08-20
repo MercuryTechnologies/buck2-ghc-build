@@ -33,36 +33,7 @@ def __nix_build_drv(ctx: AnalysisContext, drv: str, package: str, output, deps) 
 
     return out_link
 
-def _build_pkg_db(ctx: AnalysisContext, ghc_pkg, ghc_version, packages: list[Artifact], output: Artifact, identifier: str = ""):
-    init_db = cmd_args(ghc_pkg, "init", output.as_output(), delimiter = " ")
-    copy_cfgs = cmd_args(
-        'package_conf_dir="lib/ghc-{}/lib/package.conf.d"; '.format(ghc_version),
-        "for lib in ", cmd_args(packages, delimiter = " "), "; do",
-        "cp -t", output.as_output(), '"$lib/$package_conf_dir/"*.conf; ',
-        "done",
-        delimiter = " ",
-    )
-    recache = cmd_args(
-        ghc_pkg,
-        "recache",
-        "--package-db", output.as_output(),
-        delimiter = " ",
-    )
-
-    ctx.actions.run(
-        cmd_args([
-            "bash",
-            "-ec",
-            cmd_args(init_db, copy_cfgs, recache, delimiter="\n"),
-        ]),
-        category = "ghc_db",
-        identifier = identifier,
-    )
-
-
-def _build_package_db(ctx: AnalysisContext, ghc: RunInfo, ghc_pkg: RunInfo) -> (Artifact, DynamicValue):
-    pkg_db = ctx.actions.declare_output("db", dir = True)
-
+def _build_packages_info(ctx: AnalysisContext, ghc: RunInfo, ghc_pkg: RunInfo) -> DynamicValue:
     nix_drv_json_script = ctx.attrs._nix_drv_json_script[RunInfo]
 
     flake = ctx.attrs.flake
@@ -84,11 +55,6 @@ def _build_package_db(ctx: AnalysisContext, ghc: RunInfo, ghc_pkg: RunInfo) -> (
         local_only = True,
     )
 
-    package_dbs = {
-        pkg : ctx.actions.declare_output(pkg, "db")
-        for pkg in toolchain_libraries
-    }
-
     def get_outputs(info: list[str] | dict[str, typing.Any]):
         """Get outputs for `inputDrvs`, regardless of the nix version that produced the information.
 
@@ -100,11 +66,17 @@ def _build_package_db(ctx: AnalysisContext, ghc: RunInfo, ghc_pkg: RunInfo) -> (
         else:
             return info["outputs"]
 
-    def create_pkg_dbs(ctx, artifacts, _resolved, outputs, json = drv_json, package_dbs=package_dbs, ghc_info=ghc_info):
+    # a dynamic action *must* have an output
+    out = ctx.actions.declare_output("bogus")
+
+    def build_derivations(ctx, artifacts, _resolved, outputs, json = drv_json, ghc_info=ghc_info, out=out):
         json_drvs = artifacts[json].read_json()
         json_ghc = artifacts[ghc_info].read_json()
 
         ghc_version = json_ghc["version"]
+
+        # note, this output is never used
+        ctx.actions.write(outputs[out].as_output(), "")
 
         toolchain_libs = {
             drv: {
@@ -117,6 +89,8 @@ def _build_package_db(ctx: AnalysisContext, ghc: RunInfo, ghc_pkg: RunInfo) -> (
 
         deps = {}
         pkgs = {}
+        package_conf_dir = "lib/ghc-{}/lib/package.conf.d".format(ghc_version)
+
         for drv in post_order_traversal({k: v["deps"] for k, v in toolchain_libs.items()}):
             drv_info = toolchain_libs[drv]
             name = drv_info["name"]
@@ -132,43 +106,11 @@ def _build_package_db(ctx: AnalysisContext, ghc: RunInfo, ghc_pkg: RunInfo) -> (
                 deps = [deps[dep] for dep in drv_info["deps"]],
             )
 
-            requested_db = package_dbs.get(name)
-            output_db = outputs[requested_db] if requested_db else ctx.actions.declare_output(name, "db")
-
-            _build_pkg_db(
-                ctx,
-                ghc_pkg,
-                ghc_version,
-                packages = [deps[drv]],
-                identifier = name,
-                output = output_db,
-            )
-
             pkgs[name] = ctx.actions.tset(
                 HaskellPackageDbTSet,
-                value = HaskellPackage(db = output_db, path = deps[drv]),
+                value = HaskellPackage(db = cmd_args(deps[drv], package_conf_dir, delimiter="/"), path = deps[drv]),
                 children = this_pkg_deps,
             )
-
-        # some libraries come with GHC, so there is no separate haskell package for them
-        lib_names = [ drv["name"] for drv in toolchain_libs.values() ]
-        builtin_libs = [ output for name, output in package_dbs.items() if name not in lib_names ]
-
-        builtin_db = ctx.actions.declare_output("builtin_db", dir=True)
-        ctx.actions.run(
-            cmd_args("mkdir", "-p", builtin_db.as_output()),
-            category="builtin_db",
-        )
-        for lib in builtin_libs:
-            ctx.actions.symlink_file(outputs[lib].as_output(), builtin_db)
-
-        _build_pkg_db(
-            ctx,
-            ghc_pkg,
-            ghc_version,
-            deps.values(),
-            output = outputs[pkg_db],
-        )
 
         return [DynamicHaskellPackageDbInfo(packages = pkgs)]
 
@@ -176,17 +118,15 @@ def _build_package_db(ctx: AnalysisContext, ghc: RunInfo, ghc_pkg: RunInfo) -> (
         dynamic = [drv_json, ghc_info],
         promises = [],
         inputs = [],
-        outputs = [pkg_db.as_output()] + [db.as_output() for db in package_dbs.values()],
-        f = create_pkg_dbs,
+        outputs = [out.as_output()],
+        f = build_derivations,
     )
 
-    return pkg_db, dyn_pkgs_info
+    return dyn_pkgs_info
 
 def _nix_haskell_toolchain_impl(ctx: AnalysisContext) -> list[Provider]:
     ghc = ctx.attrs.ghc[RunInfo]
     ghc_pkg = ctx.attrs.ghc_pkg[RunInfo]
-
-    pkg_db, dynamic = _build_package_db(ctx, ghc, ghc_pkg)
 
     return [
         DefaultInfo(),
@@ -200,7 +140,7 @@ def _nix_haskell_toolchain_impl(ctx: AnalysisContext) -> list[Provider]:
             ghci_script_template = ctx.attrs._ghci_script_template,
             ghci_iserv_template = ctx.attrs._ghci_iserv_template,
             script_template_processor = ctx.attrs._script_template_processor,
-            packages = HaskellPackagesInfo(package_db = pkg_db, dynamic = dynamic),
+            packages = HaskellPackagesInfo(dynamic = _build_packages_info(ctx, ghc, ghc_pkg)),
         ),
         HaskellPlatformInfo(
             name = host_info().arch,

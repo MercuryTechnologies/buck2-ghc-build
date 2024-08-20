@@ -176,6 +176,45 @@ self: super: let
       url = "https://gitlab.haskell.org/ghc/ghc/-/commit/6f82305420f4e64b3c365997447e86b8d1765977.diff";
       hash = "sha256-rBcko7Pakay/OfKwR89un7joT5dOUlnFyuJt1G+bZkI=";
     })
+
+    # refactor quadratic search in warnMissingHomeModules
+    # https://gitlab.haskell.org/ghc/ghc/-/merge_requests/12607
+    (self.fetchpatch {
+      url = "https://gitlab.haskell.org/ghc/ghc/-/commit/c68ca44ad912576df7ab05103cef4d26cf6cea54.diff";
+      hash = "sha256-am8Ns5l4RrPdNMnnQ8P1HNc7/1pWfYvdebYYkDHDnaU=";
+    })
+    #./ghc-fix-quadratic-search-warn-missing-home-modules.diff
+
+    # bytecode linking
+    (self.fetchpatch {
+      url = "https://gitlab.haskell.org/ghc/ghc/-/commit/054e81f502466c0418e51929fe92c7b899c1de9b.diff";
+      hash = "sha256-7MhLvPhUArOqwCmNigjb5gSuDHzEuLuRhzr0tSTJ6V0=";
+    })
+    (self.fetchpatch {
+      url = "https://gitlab.haskell.org/ghc/ghc/-/commit/6851a2ab04ee18b70b82fdd71863e25a5c21a8e7.diff";
+      hash = "sha256-j40Qfy18A3zIlwamsNhdCnufS/fMHJ1Xd/QXtSYQqm4=";
+    })
+    (self.fetchpatch {
+      url = "https://gitlab.haskell.org/ghc/ghc/-/commit/be81a0f26da3fcea3e235093552911088b24ce54.diff";
+      hash = "sha256-mNAlQzGwMCwAgR+wCyjvtbM/ULO3IdN1t+aFfQkGVQ0=";
+    })
+    (self.fetchpatch {
+      url = "https://gitlab.haskell.org/ghc/ghc/-/commit/c76daf79e519f351b57b2937444973a729a79ef2.diff";
+      hash = "sha256-GQnvGKvC3Tuqm7nNET0/vZP7wGFRT7AlIkZtxORDIHA=";
+    })
+    (self.fetchpatch {
+      url = "https://gitlab.haskell.org/ghc/ghc/-/commit/f0de47eb22983dbdbacde611182bd408f63c7b32.diff";
+      hash = "sha256-WxZJbnanM5I6udII7bHqrbKSTogdSqW0hX2YuO5NQHI=";
+    })
+    (self.fetchpatch {
+      url = "https://gitlab.haskell.org/ghc/ghc/-/commit/6e218283b1d677013a5b960fd6f5ff1830056da3.diff";
+      hash = "sha256-NJJFovPCaavH1oYJE6q5XbNJdXHyLNiHHR8lZSzBTok=";
+    })
+
+    (self.fetchpatch {
+      url = "https://gitlab.haskell.org/torsten.schmits/ghc/-/commit/8a58e4aefe2684f4f913bd3423a0b3c4d36fa5af.diff";
+      hash = "sha256-QQvY9n0q+JkOv40MHj3BxNz6vvjxTnKaKGPwBA0HYZo=";
+    })
   ];
 in {
   haskell =
