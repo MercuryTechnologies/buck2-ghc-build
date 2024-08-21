@@ -24,15 +24,17 @@ check_executable() {
 }
 
 error() {
-    echo 'Failed to discover the external Haskell compiler. Be sure to enter `nix develop .#buck2` and check that `$GHC_PATH`, `$GHC`, `$GHC_PKG_DB`, `$GHC_EXTRA_OPTS` and `$GHC_LD_LIBRARY_PATH` are set.' >&2
+    echo 'Failed to discover the external Haskell compiler. Be sure to enter `nix develop .#buck2` and check that `$GHC_PATH`, `$GHC`, `$GHC_PKG`, `$HADDOCK`, `$GHC_PKG_DB`, `$GHC_EXTRA_OPTS` and `$GHC_LD_LIBRARY_PATH` are set.' >&2
 }
 
 trap error ERR
 
 path="$(check_env_var GHC_PATH)"
 ghc="$(check_env_var GHC)"
-ghc_pkg="$(dirname "$ghc")/ghc-pkg"
-haddock="$(dirname "$ghc")/haddock"
+ghc_pkg="$(check_env_var GHC_PKG)"
+haddock="$(check_env_var HADDOCK)"
+#ghc_pkg="$(dirname "$ghc")/ghc-pkg"
+#haddock="$(dirname "$ghc")/haddock"
 
 ghc_ld_library_path="$(check_env_var GHC_LD_LIBRARY_PATH)"
 IFS=":" read -r -a ghc_pkg_db <<< "$(check_env_var GHC_PKG_DB)"
@@ -78,6 +80,7 @@ set -euo pipefail
 export PATH="$path:\$PATH"
 export LD_LIBRARY_PATH="$ghc_ld_library_path"
 export DYLD_LIBRARY_PATH="$ghc_ld_library_path"
+#export DYLD_PRINT_LIBRARIES=1
 exec "$orig" ${dbstr[@]} ${optstr[@]} "\$@"
 EOF
     chmod +x "$wrapper"

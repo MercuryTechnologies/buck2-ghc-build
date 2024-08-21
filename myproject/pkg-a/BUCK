@@ -2,7 +2,7 @@ load("//haskell:defs.bzl", "default_ghc_flags")
 
 haskell_library(
     name = "lib",
-    srcs = glob(["**/*.hs"]),
+    srcs = glob(["src/**/*.hs"]),
     compiler_flags = default_ghc_flags,
     visibility = ["//myproject/..."],
     deps = [
