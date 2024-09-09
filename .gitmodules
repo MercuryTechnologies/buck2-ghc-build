@@ -1,3 +1,6 @@
 [submodule "prelude"]
 	path = prelude
 	url = git@github.com:MercuryTechnologies/buck2-prelude.git
+[submodule "ghc"]
+	path = ghc-build/ghc
+	url = https://gitlab.haskell.org/ghc/ghc.git

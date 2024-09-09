@@ -4,5 +4,20 @@
 
 [
   "aeson"
+  "array"
   "base"
+  "bytestring"
+  "containers"
+  "deepseq"
+  "directory"
+  "exceptions"
+  "filepath"
+  "ghc-bignum"
+  "ghc-boot"
+  "ghc-prim"
+  "os-string"
+  "process"
+  "time"
+  "transformers"
+  "unix"
 ]

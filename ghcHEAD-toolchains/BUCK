@@ -36,7 +36,7 @@ ghcHEAD_haskell_toolchain(
     name = "haskell",
     visibility = ["PUBLIC"],
     compiler_flags = [
-        "-fwrite-ide-info",
+        #"-fwrite-ide-info",
     ],
     script = "env_haskell.sh",
 )
