@@ -8,6 +8,7 @@
 { lib
 , darwin
 , fetchFromGitHub
+, installShellFiles
 , makeRustPlatform
 , openssl
 , pkg-config
@@ -19,7 +20,7 @@
 
 let
   # based on Buck2's `rust-toolchain` file.
-  rust-nightly = rust-bin.nightly."2024-02-01".default.override {
+  rust-nightly = rust-bin.nightly."2024-06-08".default.override {
     extensions = [ "llvm-tools-preview" "rustc-dev" "rust-src" ];
   };
   rustPlatform = makeRustPlatform {
@@ -30,14 +31,14 @@ in
 
 rustPlatform.buildRustPackage rec {
   pname = "buck2";
-  git_rev = "516fc960a6ee1ea667df0a22e1a2ca19d45bdc05";
+  git_rev = "391bcf0f0faa50996a441c9329f219a25170957c";
   version = "git-${git_rev}";
 
   src = fetchFromGitHub {
     owner = "facebook";
     repo = pname;
     rev = git_rev;
-    hash = "sha256-ETJ9H1GEKnaYtPPDE+QBqC1F9G2r59ku53jaStunncg=";
+    hash = "sha256-mY1s4vm/2TirjnvyNV8bfJ248qibJL2ZTF36awnVP7Q=";
   };
 
   patches = [
@@ -53,7 +54,7 @@ rustPlatform.buildRustPackage rec {
     ln -s ${./Cargo.lock} Cargo.lock
   '';
 
-  nativeBuildInputs = [ protobuf pkg-config ];
+  nativeBuildInputs = [ installShellFiles protobuf pkg-config ];
   buildInputs = [ openssl sqlite ] ++ lib.optionals stdenv.isDarwin [
       darwin.apple_sdk.frameworks.CoreFoundation
       darwin.apple_sdk.frameworks.CoreServices
@@ -72,6 +73,10 @@ rustPlatform.buildRustPackage rec {
     ln -sfv $out/bin/buck $out/bin/buck2
     mv $out/bin/starlark  $out/bin/buck2-starlark
     mv $out/bin/read_dump $out/bin/buck2-read_dump
+
+    installShellCompletion --cmd buck2 \
+      --bash <( $out/bin/buck2 completion bash ) \
+      --zsh <( $out/bin/buck2 completion zsh )
   '';
 
   meta = with lib; {
