@@ -1,6 +1,6 @@
-# buck2-ghcHEAD
+# buck2-ghc-build
 
-Buck2 project template supporting both nix-based GHC env and custom.
+Building GHC HEAD with buck2 toolchain.
 
 ## Getting started
 
@@ -31,17 +31,7 @@ Note that one can specify multiple `package.db` locations by a colon-separated l
 ## Build
 
 ```
-$ buck2 build //myproject:pkg-b[static]
-```
-
-To build a specific target and show which output was generated for it
-```
-$ buck2 build //myproject:pkg-b --show-output
-```
-
-To show compiler output during the build
-```
-$ buck2 build //myproject:pkg-b -v 2,stderr
+$ buck2 build //ghc-build:ghc-internal
 ```
 
 ## Documentation
