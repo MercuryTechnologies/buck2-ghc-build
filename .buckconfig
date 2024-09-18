@@ -1,7 +1,8 @@
 [repositories]
 root = .
 prelude = prelude
-toolchains = toolchains
+#toolchains = toolchains
+toolchains = ghcHEAD-toolchains
 none = none
 
 [repository_aliases]

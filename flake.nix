@@ -62,17 +62,41 @@
       };
 
       devShells = rec {
-        buck2 = pkgs.mkShellNoCC {
-          name = "buck2-test-shell";
+        buck2 = buck2-nix;
+        buck2-nix = pkgs.mkShellNoCC {
+          name = "buck2-nix-shell";
           packages = buck2BuildInputs ++ [
             pkgs.buck2-source
             pkgs.nix
+            pkgs.jq
           ];
 
           shellHook = ''
-            export PS1="\n[buck2-test-shell:\w]$ \0"
+            export PS1="\n[buck2-nix:\w]$ \0"
           '';
         };
+        buck2-ghcHEAD = pkgs.mkShell {
+          name = "buck2-ghcHEAD-shell";
+          packages = buck2BuildInputs ++ [
+            pkgs.buck2-source
+            pkgs.nix
+            pkgs.jq
+          ];
+          # GHC in invokes Nix cc, cc-wrapper invokes mktemp from $PATH. Also GHC invokes otool and
+          # install_name_tool from $PATH on Darwin.
+          GHC_PATH = pkgs.lib.makeSearchPath "bin" ([ pkgs.coreutils ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
+            pkgs.stdenv.cc.bintools
+            pkgs.darwin.cctools
+          ]);
+
+          shellHook = ''
+            # Haskell toolchain
+            #export GHC=${ghcWithPackages}/bin/ghc
+            #
+            export PS1="\n[buck2-ghcHEAD:\w]$ \0"
+          '';
+        };
+
       };
     });
 

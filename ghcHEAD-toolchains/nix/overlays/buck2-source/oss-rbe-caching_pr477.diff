@@ -1,0 +1,356 @@
+diff --git a/app/buck2_execute/src/execute/output.rs b/app/buck2_execute/src/execute/output.rs
+index a2a27d80a..dda4d99cf 100644
+--- a/app/buck2_execute/src/execute/output.rs
++++ b/app/buck2_execute/src/execute/output.rs
+@@ -14,10 +14,12 @@ use anyhow::Context;
+ use buck2_common::file_ops::FileDigest;
+ use buck2_core::execution_types::executor_config::RemoteExecutorUseCase;
+ use futures::future;
++use remote_execution::InlinedBlobWithDigest;
+ use remote_execution::TDigest;
+ 
+ use crate::digest::CasDigestConversionResultExt;
+ use crate::digest::CasDigestFromReExt;
++use crate::digest::CasDigestToReExt;
+ use crate::digest_config::DigestConfig;
+ use crate::re::manager::ManagedRemoteExecutionClient;
+ use crate::re::streams::RemoteCommandStdStreams;
+@@ -227,12 +229,13 @@ impl CommandStdStreams {
+         self,
+         client: &ManagedRemoteExecutionClient,
+         use_case: RemoteExecutorUseCase,
++        digest_config: DigestConfig,
+     ) -> anyhow::Result<StdStreamPair<ReStdStream>> {
+         match self {
+             Self::Local { stdout, stderr } => {
+                 let (stdout, stderr) = future::try_join(
+-                    maybe_upload_to_re(client, use_case, stdout),
+-                    maybe_upload_to_re(client, use_case, stderr),
++                    maybe_upload_to_re(client, use_case, stdout, digest_config),
++                    maybe_upload_to_re(client, use_case, stderr, digest_config),
+                 )
+                 .await?;
+ 
+@@ -265,11 +268,17 @@ async fn maybe_upload_to_re(
+     client: &ManagedRemoteExecutionClient,
+     use_case: RemoteExecutorUseCase,
+     bytes: Vec<u8>,
++    digest_config: DigestConfig,
+ ) -> anyhow::Result<ReStdStream> {
+     const MIN_STREAM_UPLOAD_SIZE: usize = 50 * 1024; // Same as RE
+     if bytes.len() < MIN_STREAM_UPLOAD_SIZE {
+         return Ok(ReStdStream::Raw(bytes));
+     }
+-    let digest = client.upload_blob(bytes, use_case).await?;
++    let inline_blob = InlinedBlobWithDigest {
++        digest: FileDigest::from_content(&bytes, digest_config.cas_digest_config()).to_re(),
++        blob: bytes,
++        ..Default::default()
++    };
++    let digest = client.upload_blob(inline_blob, use_case).await?;
+     Ok(ReStdStream::Digest(digest))
+ }
+diff --git a/app/buck2_execute/src/re/client.rs b/app/buck2_execute/src/re/client.rs
+index ae3f21c4c..35e882445 100644
+--- a/app/buck2_execute/src/re/client.rs
++++ b/app/buck2_execute/src/re/client.rs
+@@ -329,7 +329,7 @@ impl RemoteExecutionClient {
+ 
+     pub async fn upload_blob(
+         &self,
+-        blob: Vec<u8>,
++        blob: InlinedBlobWithDigest,
+         use_case: RemoteExecutorUseCase,
+     ) -> anyhow::Result<TDigest> {
+         self.data
+@@ -1093,12 +1093,14 @@ impl RemoteExecutionClientImpl {
+ 
+     pub async fn upload_blob(
+         &self,
+-        blob: Vec<u8>,
++        blob: InlinedBlobWithDigest,
+         use_case: RemoteExecutorUseCase,
+     ) -> anyhow::Result<TDigest> {
++        let digest = blob.digest.clone();
+         self.client()
+             .upload_blob(blob, use_case.metadata(None))
+-            .await
++            .await?;
++        Ok(digest)
+     }
+ 
+     async fn materialize_files(
+@@ -1207,6 +1209,9 @@ impl RemoteExecutionClientImpl {
+                     ..Default::default()
+                 },
+             )
++            .inspect_err(|err| {
++                tracing::warn!("write_action_result failed: {err}");
++            })
+             .await
+     }
+ }
+diff --git a/app/buck2_execute/src/re/manager.rs b/app/buck2_execute/src/re/manager.rs
+index 7b9aea8e1..9f4f060d9 100644
+--- a/app/buck2_execute/src/re/manager.rs
++++ b/app/buck2_execute/src/re/manager.rs
+@@ -452,7 +452,7 @@ impl ManagedRemoteExecutionClient {
+ 
+     pub async fn upload_blob(
+         &self,
+-        blob: Vec<u8>,
++        blob: InlinedBlobWithDigest,
+         use_case: RemoteExecutorUseCase,
+     ) -> anyhow::Result<TDigest> {
+         self.lock()?.get().await?.upload_blob(blob, use_case).await
+diff --git a/app/buck2_execute_impl/src/executors/caching.rs b/app/buck2_execute_impl/src/executors/caching.rs
+index 6c13c1623..771286a0d 100644
+--- a/app/buck2_execute_impl/src/executors/caching.rs
++++ b/app/buck2_execute_impl/src/executors/caching.rs
+@@ -434,7 +434,7 @@ impl CacheUploader {
+                 .report
+                 .std_streams
+                 .clone()
+-                .into_re(&self.re_client, self.re_use_case)
++                .into_re(&self.re_client, self.re_use_case, digest_config)
+                 .await
+                 .context("Error accessing std_streams")
+         };
+diff --git a/remote_execution/oss/re_grpc/src/client.rs b/remote_execution/oss/re_grpc/src/client.rs
+index 486f12883..e4db6362c 100644
+--- a/remote_execution/oss/re_grpc/src/client.rs
++++ b/remote_execution/oss/re_grpc/src/client.rs
+@@ -41,6 +41,7 @@ use re_grpc_proto::build::bazel::remote::execution::v2::Digest;
+ use re_grpc_proto::build::bazel::remote::execution::v2::ExecuteOperationMetadata;
+ use re_grpc_proto::build::bazel::remote::execution::v2::ExecuteRequest as GExecuteRequest;
+ use re_grpc_proto::build::bazel::remote::execution::v2::ExecuteResponse as GExecuteResponse;
++use re_grpc_proto::build::bazel::remote::execution::v2::ExecutedActionMetadata;
+ use re_grpc_proto::build::bazel::remote::execution::v2::FindMissingBlobsRequest;
+ use re_grpc_proto::build::bazel::remote::execution::v2::FindMissingBlobsResponse;
+ use re_grpc_proto::build::bazel::remote::execution::v2::GetActionResultRequest;
+@@ -48,6 +49,9 @@ use re_grpc_proto::build::bazel::remote::execution::v2::GetCapabilitiesRequest;
+ use re_grpc_proto::build::bazel::remote::execution::v2::RequestMetadata;
+ use re_grpc_proto::build::bazel::remote::execution::v2::ResultsCachePolicy;
+ use re_grpc_proto::build::bazel::remote::execution::v2::ToolDetails;
++use re_grpc_proto::build::bazel::remote::execution::v2::OutputDirectory;
++use re_grpc_proto::build::bazel::remote::execution::v2::OutputFile;
++use re_grpc_proto::build::bazel::remote::execution::v2::UpdateActionResultRequest;
+ use re_grpc_proto::google::bytestream::byte_stream_client::ByteStreamClient;
+ use re_grpc_proto::google::bytestream::ReadRequest;
+ use re_grpc_proto::google::bytestream::ReadResponse;
+@@ -117,6 +121,13 @@ fn check_status(status: Status) -> Result<(), REClientError> {
+     })
+ }
+ 
++fn ttimestamp_to(ts: TTimestamp) -> Option<prost_types::Timestamp> {
++    Some(prost_types::Timestamp {
++        seconds: ts.seconds,
++        nanos: ts.nanos,
++    })
++}
++
+ fn ttimestamp_from(ts: Option<::prost_types::Timestamp>) -> TTimestamp {
+     match ts {
+         Some(timestamp) => TTimestamp {
+@@ -518,10 +529,37 @@ impl REClient {
+ 
+     pub async fn write_action_result(
+         &self,
+-        _metadata: RemoteExecutionMetadata,
+-        _request: WriteActionResultRequest,
++        metadata: RemoteExecutionMetadata,
++        write_request: WriteActionResultRequest,
+     ) -> anyhow::Result<WriteActionResultResponse> {
+-        Err(anyhow::anyhow!("Not supported"))
++        let mut client = self.grpc_clients.action_cache_client.clone();
++        let action_digest = tdigest_to(write_request.action_digest.clone());
++        let action_result = convert_taction_result_to_rbe(write_request.action_result)?;
++        let request = UpdateActionResultRequest {
++            action_digest: Some(action_digest),
++            action_result: Some(action_result),
++            results_cache_policy: None,
++            instance_name: self.instance_name.as_str().to_owned(),
++        };
++
++        let t: ActionResult = client
++            .update_action_result(with_re_metadata(
++                request,
++                metadata,
++                self.runtime_opts.use_fbcode_metadata,
++            ))
++            .await?
++            .into_inner();
++
++        let result = convert_action_result(t)?;
++        let result = WriteActionResultResponse {
++            actual_action_result: result,
++            // NOTE: This is an arbitrary number because RBE does not return information
++            // on the TTL of the ActionResult.
++            // Also buck2 does not appear to read this value anywhere.
++            ttl_seconds: 0,
++        };
++        Ok(result)
+     }
+ 
+     pub async fn execute_with_progress(
+@@ -686,11 +724,21 @@ impl REClient {
+ 
+     pub async fn upload_blob(
+         &self,
+-        _blob: Vec<u8>,
+-        _metadata: RemoteExecutionMetadata,
+-    ) -> anyhow::Result<TDigest> {
+-        // TODO(aloiscochard)
+-        Err(anyhow::anyhow!("Not implemented (RE upload_blob)"))
++        blob: InlinedBlobWithDigest,
++        metadata: RemoteExecutionMetadata,
++    ) -> anyhow::Result<()> {
++        self.upload(
++            metadata,
++            UploadRequest {
++                inlined_blobs_with_digest: Some(vec![blob]),
++                files_with_digest: None,
++                directories: None,
++                upload_only_missing: false,
++                ..Default::default()
++            },
++        )
++        .await?;
++        Ok(())
+     }
+ 
+     pub async fn download(
+@@ -820,7 +868,119 @@ impl REClient {
+     }
+ }
+ 
++fn convert_execution_action_metadata_to_rbe(
++    execution_metadata: TExecutedActionMetadata,
++) -> anyhow::Result<ExecutedActionMetadata> {
++    let TExecutedActionMetadata {
++        worker,
++        queued_timestamp,
++        worker_start_timestamp,
++        worker_completed_timestamp,
++        input_fetch_start_timestamp,
++        input_fetch_completed_timestamp,
++        execution_start_timestamp,
++        execution_completed_timestamp,
++        output_upload_start_timestamp,
++        output_upload_completed_timestamp,
++        execution_dir: _,
++        input_analyzing_start_timestamp: _,
++        input_analyzing_completed_timestamp: _,
++        execution_attempts: _,
++        last_queued_timestamp: _,
++        instruction_counts: _,
++        auxiliary_metadata: _,
++        _dot_dot_default,
++    } = execution_metadata;
++    Ok(ExecutedActionMetadata {
++        worker,
++        worker_start_timestamp: ttimestamp_to(worker_start_timestamp),
++        worker_completed_timestamp: ttimestamp_to(worker_completed_timestamp),
++        input_fetch_start_timestamp: ttimestamp_to(input_fetch_start_timestamp),
++        input_fetch_completed_timestamp: ttimestamp_to(input_fetch_completed_timestamp),
++        execution_start_timestamp: ttimestamp_to(execution_start_timestamp),
++        execution_completed_timestamp: ttimestamp_to(execution_completed_timestamp),
++        output_upload_start_timestamp: ttimestamp_to(output_upload_start_timestamp),
++        output_upload_completed_timestamp: ttimestamp_to(output_upload_completed_timestamp),
++        queued_timestamp: ttimestamp_to(queued_timestamp),
++        // TODO(cormacrelf): calculate this in a reasonable way for buck.
++        // see protobuf docs on virtual_execution_duration.
++        // May be able to use last_queued_timestamp
++        virtual_execution_duration: None,
++        // Ugh, need a routine to convert TAny to prost_type::Any...
++        auxiliary_metadata: vec![],
++    })
++}
++
++fn convert_taction_result_to_rbe(taction_result: TActionResult2) -> anyhow::Result<ActionResult> {
++    let TActionResult2 {
++        output_files,
++        output_symlinks,
++        output_directories,
++        exit_code,
++        stdout_raw,
++        stdout_digest,
++        stderr_raw,
++        stderr_digest,
++        execution_metadata,
++        auxiliary_metadata: _,
++        _dot_dot_default,
++    } = taction_result;
++
++    let execution_metadata = convert_execution_action_metadata_to_rbe(execution_metadata)?;
++    let output_files = output_files.into_try_map(|output_file| {
++        let TFile {
++            digest,
++            name,
++            executable,
++            ..
++        } = output_file;
++        anyhow::Ok(OutputFile {
++            digest: Some(tdigest_to(digest.digest)),
++            path: name,
++            is_executable: executable,
++            // Clients SHOULD NOT populate this field when uploading to the cache.
++            contents: Vec::new(),
++            node_properties: None,
++        })
++    })?;
++    let output_directories = output_directories.into_try_map(|output_directory| {
++        let tree_digest = tdigest_to(output_directory.tree_digest);
++        anyhow::Ok(OutputDirectory {
++            path: output_directory.path,
++            tree_digest: Some(tree_digest.clone()),
++            // TODO(cormacrelf): check whether buck2_execute::directory::directory_to_re_tree
++            // conforms with the requirements of passing `true` here (see .proto file)
++            is_topologically_sorted: false,
++        })
++    })?;
++    anyhow::Ok(ActionResult {
++        exit_code,
++        execution_metadata: Some(execution_metadata),
++        output_directories,
++        output_files,
++        // TODO: support symlinks
++        output_symlinks: vec![],
++        output_file_symlinks: vec![],
++        output_directory_symlinks: vec![],
++        // If missing, it's because we uploaded it already
++        // if present, it's inline
++        stdout_raw: stdout_raw.unwrap_or(Vec::new()),
++        stdout_digest: stdout_digest.map(tdigest_to),
++        stderr_raw: stderr_raw.unwrap_or(Vec::new()),
++        stderr_digest: stderr_digest.map(tdigest_to),
++    })
++}
++
+ fn convert_action_result(action_result: ActionResult) -> anyhow::Result<TActionResult2> {
++    if !action_result.output_symlinks.is_empty()
++        || !action_result.output_file_symlinks.is_empty()
++        || !action_result.output_directory_symlinks.is_empty()
++    {
++        anyhow::bail!(
++            "CAS ActionResult returned with symlinks in it, buck2 cannot handle these yet"
++        );
++    }
++
+     let execution_metadata = action_result
+         .execution_metadata
+         .with_context(|| "The execution metadata are not defined.")?;
+diff --git a/remote_execution/oss/re_grpc/src/response.rs b/remote_execution/oss/re_grpc/src/response.rs
+index 6348a1a73..711e10fda 100644
+--- a/remote_execution/oss/re_grpc/src/response.rs
++++ b/remote_execution/oss/re_grpc/src/response.rs
+@@ -91,6 +91,9 @@ pub struct TSubsysPerfCount {
+ pub struct TActionResult2 {
+     pub output_files: Vec<TFile>,
+     pub output_directories: Vec<TDirectory2>,
++    // TODO: output_symlinks (use in preference when output_paths mode is used the execution side)
++    // TODO: output_file_symlinks (deprecated)
++    // TODO: output_directory_symlinks (deprecated)
+     pub exit_code: i32,
+     pub stdout_raw: Option<Vec<u8>>,
+     pub stdout_digest: Option<TDigest>,
