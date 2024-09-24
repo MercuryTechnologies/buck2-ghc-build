@@ -8,7 +8,7 @@ index 2b156aba2..2ecbbbae9 100644
  use futures::future;
 +use remote_execution::InlinedBlobWithDigest;
  use remote_execution::TDigest;
- 
+
  use crate::digest::CasDigestConversionResultExt;
  use crate::digest::CasDigestFromReExt;
 +use crate::digest::CasDigestToReExt;
@@ -30,7 +30,7 @@ index 2b156aba2..2ecbbbae9 100644
 +                    maybe_upload_to_re(client, use_case, stderr, digest_config),
                  )
                  .await?;
- 
+
 @@ -276,11 +279,17 @@ async fn maybe_upload_to_re(
      client: &ManagedRemoteExecutionClient,
      use_case: RemoteExecutorUseCase,
@@ -63,7 +63,7 @@ index 3b5d5b48b..ee6f518a5 100644
  use itertools::Itertools;
  use prost::Message;
 @@ -318,7 +319,7 @@ impl RemoteExecutionClient {
- 
+
      pub async fn upload_blob(
          &self,
 -        blob: Vec<u8>,
@@ -72,7 +72,7 @@ index 3b5d5b48b..ee6f518a5 100644
      ) -> anyhow::Result<TDigest> {
          self.data
 @@ -1119,7 +1120,7 @@ impl RemoteExecutionClientImpl {
- 
+
      pub async fn upload_blob(
          &self,
 -        blob: Vec<u8>,
@@ -95,7 +95,7 @@ index 874eb4bd4..13eb5673f 100644
 --- a/app/buck2_execute/src/re/manager.rs
 +++ b/app/buck2_execute/src/re/manager.rs
 @@ -455,7 +455,7 @@ impl ManagedRemoteExecutionClient {
- 
+
      pub async fn upload_blob(
          &self,
 -        blob: Vec<u8>,
@@ -177,7 +177,7 @@ index 3c5b8a3b9..369af3aaf 100644
 @@ -117,6 +121,13 @@ fn check_status(status: Status) -> Result<(), REClientError> {
      })
  }
- 
+
 +fn ttimestamp_to(ts: TTimestamp) -> Option<prost_types::Timestamp> {
 +    Some(prost_types::Timestamp {
 +        seconds: ts.seconds,
@@ -189,7 +189,7 @@ index 3c5b8a3b9..369af3aaf 100644
      match ts {
          Some(timestamp) => TTimestamp {
 @@ -589,10 +600,37 @@ impl REClient {
- 
+
      pub async fn write_action_result(
          &self,
 -        _metadata: RemoteExecutionMetadata,
@@ -227,10 +227,10 @@ index 3c5b8a3b9..369af3aaf 100644
 +        };
 +        Ok(result)
      }
- 
+
      pub async fn execute_with_progress(
 @@ -758,11 +796,22 @@ impl REClient {
- 
+
      pub async fn upload_blob(
          &self,
 -        _blob: Vec<u8>,
@@ -254,12 +254,12 @@ index 3c5b8a3b9..369af3aaf 100644
 +        .await?;
 +        Ok(digest)
      }
- 
+
      pub async fn download(
 @@ -912,7 +961,119 @@ impl REClient {
      }
  }
- 
+
 +fn convert_execution_action_metadata_to_rbe(
 +    execution_metadata: TExecutedActionMetadata,
 +) -> anyhow::Result<ExecutedActionMetadata> {
