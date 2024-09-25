@@ -62,21 +62,8 @@
       };
 
       devShells = rec {
-        buck2 = buck2-nix;
-        buck2-nix = pkgs.mkShellNoCC {
-          name = "buck2-nix-shell";
-          packages = buck2BuildInputs ++ [
-            pkgs.buck2-source
-            pkgs.nix
-            pkgs.jq
-          ];
-
-          shellHook = ''
-            export PS1="\n[buck2-nix:\w]$ \0"
-          '';
-        };
-        buck2-ghcHEAD = pkgs.mkShell {
-          name = "buck2-ghcHEAD-shell";
+        buck2 = pkgs.mkShell {
+          name = "buck2-shell";
           packages = buck2BuildInputs ++ [
             pkgs.buck2-source
             pkgs.nix
@@ -92,7 +79,7 @@
           ]);
 
           shellHook = ''
-            export PS1="\n[buck2-ghcHEAD:\w]$ \0"
+            export PS1="\n[buck2:\w]$ \0"
           '';
         };
 
