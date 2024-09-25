@@ -37,6 +37,19 @@ def _build_pkg_db(ctx: AnalysisContext, ghc_pkg, ghc_version, packages: list[Art
         identifier = identifier,
     )
 
+def _build_impl(actions, artifacts, dynamic_values, outputs, arg):
+    json_ghc = artifacts[arg.ghc_info].read_json()
+
+    ghc_version = json_ghc["version"]
+
+    # note, this output is never used
+    actions.write(outputs[arg.out].as_output(), "")
+
+    pkgs = {}
+
+    return [DynamicHaskellPackageDbInfo(packages = pkgs)]
+
+_build = dynamic_actions(impl = _build_impl)
 
 def _build_packages_info(ctx: AnalysisContext, ghc: Artifact, ghc_pkg: Artifact) -> DynamicValue:
     ghc_info = ctx.actions.declare_output("ghc_info.json")
@@ -60,25 +73,14 @@ def _build_packages_info(ctx: AnalysisContext, ghc: Artifact, ghc_pkg: Artifact)
     # a dynamic action *must* have an output
     out = ctx.actions.declare_output("bogus")
 
-    def build(ctx, artifacts, _resolved, outputs, ghc_info=ghc_info, out=out):
-        json_ghc = artifacts[ghc_info].read_json()
-
-        ghc_version = json_ghc["version"]
-
-        # note, this output is never used
-        ctx.actions.write(outputs[out].as_output(), "")
-
-        pkgs = {}
-
-        return [DynamicHaskellPackageDbInfo(packages = pkgs)]
-
-    dyn_pkgs_info = ctx.actions.dynamic_output(
-        dynamic = [ghc_info],
-        promises = [],
-        inputs = [],
-        outputs = [out.as_output()],
-        f = build,
-    )
+    dyn_pkgs_info = ctx.actions.dynamic_output_new(_build(
+          dynamic = [ghc_info],
+          outputs = [out.as_output()],
+          arg = struct(
+            ghc_info = ghc_info,
+            out = out,
+          ),
+    ))
 
     return dyn_pkgs_info
 

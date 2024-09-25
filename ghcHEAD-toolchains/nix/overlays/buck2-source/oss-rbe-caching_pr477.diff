@@ -1,5 +1,5 @@
 diff --git a/app/buck2_execute/src/execute/output.rs b/app/buck2_execute/src/execute/output.rs
-index a2a27d80a..dda4d99cf 100644
+index 2b156aba2..2ecbbbae9 100644
 --- a/app/buck2_execute/src/execute/output.rs
 +++ b/app/buck2_execute/src/execute/output.rs
 @@ -14,10 +14,12 @@ use anyhow::Context;
@@ -15,7 +15,7 @@ index a2a27d80a..dda4d99cf 100644
  use crate::digest_config::DigestConfig;
  use crate::re::manager::ManagedRemoteExecutionClient;
  use crate::re::streams::RemoteCommandStdStreams;
-@@ -227,12 +229,13 @@ impl CommandStdStreams {
+@@ -238,12 +240,13 @@ impl CommandStdStreams {
          self,
          client: &ManagedRemoteExecutionClient,
          use_case: RemoteExecutorUseCase,
@@ -31,7 +31,7 @@ index a2a27d80a..dda4d99cf 100644
                  )
                  .await?;
  
-@@ -265,11 +268,17 @@ async fn maybe_upload_to_re(
+@@ -276,11 +279,17 @@ async fn maybe_upload_to_re(
      client: &ManagedRemoteExecutionClient,
      use_case: RemoteExecutorUseCase,
      bytes: Vec<u8>,
@@ -51,10 +51,18 @@ index a2a27d80a..dda4d99cf 100644
      Ok(ReStdStream::Digest(digest))
  }
 diff --git a/app/buck2_execute/src/re/client.rs b/app/buck2_execute/src/re/client.rs
-index ae3f21c4c..35e882445 100644
+index 3b5d5b48b..ee6f518a5 100644
 --- a/app/buck2_execute/src/re/client.rs
 +++ b/app/buck2_execute/src/re/client.rs
-@@ -329,7 +329,7 @@ impl RemoteExecutionClient {
+@@ -28,6 +28,7 @@ use fbinit::FacebookInit;
+ use futures::stream::BoxStream;
+ use futures::FutureExt;
+ use futures::StreamExt;
++use futures::TryFutureExt;
+ use gazebo::prelude::*;
+ use itertools::Itertools;
+ use prost::Message;
+@@ -318,7 +319,7 @@ impl RemoteExecutionClient {
  
      pub async fn upload_blob(
          &self,
@@ -63,7 +71,7 @@ index ae3f21c4c..35e882445 100644
          use_case: RemoteExecutorUseCase,
      ) -> anyhow::Result<TDigest> {
          self.data
-@@ -1093,12 +1093,14 @@ impl RemoteExecutionClientImpl {
+@@ -1119,7 +1120,7 @@ impl RemoteExecutionClientImpl {
  
      pub async fn upload_blob(
          &self,
@@ -71,30 +79,22 @@ index ae3f21c4c..35e882445 100644
 +        blob: InlinedBlobWithDigest,
          use_case: RemoteExecutorUseCase,
      ) -> anyhow::Result<TDigest> {
-+        let digest = blob.digest.clone();
-         self.client()
-             .upload_blob(blob, use_case.metadata(None))
--            .await
-+            .await?;
-+        Ok(digest)
-     }
- 
-     async fn materialize_files(
-@@ -1207,6 +1209,9 @@ impl RemoteExecutionClientImpl {
-                     ..Default::default()
-                 },
-             )
-+            .inspect_err(|err| {
-+                tracing::warn!("write_action_result failed: {err}");
-+            })
-             .await
-     }
- }
+         with_error_handler(
+@@ -1258,6 +1259,9 @@ impl RemoteExecutionClientImpl {
+                         ..Default::default()
+                     },
+                 )
++                .inspect_err(|err| {
++                    tracing::warn!("write_action_result failed: {err}");
++                })
+                 .await,
+         )
+         .await
 diff --git a/app/buck2_execute/src/re/manager.rs b/app/buck2_execute/src/re/manager.rs
-index 7b9aea8e1..9f4f060d9 100644
+index 874eb4bd4..13eb5673f 100644
 --- a/app/buck2_execute/src/re/manager.rs
 +++ b/app/buck2_execute/src/re/manager.rs
-@@ -452,7 +452,7 @@ impl ManagedRemoteExecutionClient {
+@@ -455,7 +455,7 @@ impl ManagedRemoteExecutionClient {
  
      pub async fn upload_blob(
          &self,
@@ -104,10 +104,10 @@ index 7b9aea8e1..9f4f060d9 100644
      ) -> anyhow::Result<TDigest> {
          self.lock()?.get().await?.upload_blob(blob, use_case).await
 diff --git a/app/buck2_execute_impl/src/executors/caching.rs b/app/buck2_execute_impl/src/executors/caching.rs
-index 6c13c1623..771286a0d 100644
+index a2ae06fbe..6e5d28076 100644
 --- a/app/buck2_execute_impl/src/executors/caching.rs
 +++ b/app/buck2_execute_impl/src/executors/caching.rs
-@@ -434,7 +434,7 @@ impl CacheUploader {
+@@ -416,7 +416,7 @@ impl CacheUploader {
                  .report
                  .std_streams
                  .clone()
@@ -116,11 +116,47 @@ index 6c13c1623..771286a0d 100644
                  .await
                  .context("Error accessing std_streams")
          };
+diff --git a/examples/remote_execution/internal/tests/large_stdout/BUCK b/examples/remote_execution/internal/tests/large_stdout/BUCK
+new file mode 100644
+index 000000000..8200f35cc
+--- /dev/null
++++ b/examples/remote_execution/internal/tests/large_stdout/BUCK
+@@ -0,0 +1,3 @@
++load(":defs.bzl", "tests")
++
++tests(name = "tests")
+diff --git a/examples/remote_execution/internal/tests/large_stdout/defs.bzl b/examples/remote_execution/internal/tests/large_stdout/defs.bzl
+new file mode 100644
+index 000000000..06bdd62e0
+--- /dev/null
++++ b/examples/remote_execution/internal/tests/large_stdout/defs.bzl
+@@ -0,0 +1,21 @@
++# Copyright (c) Meta Platforms, Inc. and affiliates.
++#
++# This source code is licensed under both the MIT license found in the
++# LICENSE-MIT file in the root directory of this source tree and the Apache
++# License, Version 2.0 found in the LICENSE-APACHE file in the root directory
++# of this source tree.
++
++def _tests(ctx):
++    # Create a large stdout stream locally, and upload it to CAS.
++    # The limit for inline stdout is 50KiB. So this will force calling client.upload_blob.
++    stage0 = ctx.actions.declare_output("stage0")
++    ctx.actions.run(
++        ["sh", "-c", 'yes abcdefghijklmnopqrstuvwxyz | head -c 65536 && echo done > "$1"', "--", stage0.as_output()],
++        category = "stage0",
++        local_only = True,
++        allow_cache_upload = True,
++    )
++
++    return [DefaultInfo(stage0)]
++
++tests = rule(attrs = {}, impl = _tests)
 diff --git a/remote_execution/oss/re_grpc/src/client.rs b/remote_execution/oss/re_grpc/src/client.rs
-index 486f12883..e4db6362c 100644
+index 3c5b8a3b9..369af3aaf 100644
 --- a/remote_execution/oss/re_grpc/src/client.rs
 +++ b/remote_execution/oss/re_grpc/src/client.rs
-@@ -41,6 +41,7 @@ use re_grpc_proto::build::bazel::remote::execution::v2::Digest;
+@@ -46,6 +46,7 @@ use re_grpc_proto::build::bazel::remote::execution::v2::Digest;
  use re_grpc_proto::build::bazel::remote::execution::v2::ExecuteOperationMetadata;
  use re_grpc_proto::build::bazel::remote::execution::v2::ExecuteRequest as GExecuteRequest;
  use re_grpc_proto::build::bazel::remote::execution::v2::ExecuteResponse as GExecuteResponse;
@@ -128,7 +164,7 @@ index 486f12883..e4db6362c 100644
  use re_grpc_proto::build::bazel::remote::execution::v2::FindMissingBlobsRequest;
  use re_grpc_proto::build::bazel::remote::execution::v2::FindMissingBlobsResponse;
  use re_grpc_proto::build::bazel::remote::execution::v2::GetActionResultRequest;
-@@ -48,6 +49,9 @@ use re_grpc_proto::build::bazel::remote::execution::v2::GetCapabilitiesRequest;
+@@ -53,6 +54,9 @@ use re_grpc_proto::build::bazel::remote::execution::v2::GetCapabilitiesRequest;
  use re_grpc_proto::build::bazel::remote::execution::v2::RequestMetadata;
  use re_grpc_proto::build::bazel::remote::execution::v2::ResultsCachePolicy;
  use re_grpc_proto::build::bazel::remote::execution::v2::ToolDetails;
@@ -152,7 +188,7 @@ index 486f12883..e4db6362c 100644
  fn ttimestamp_from(ts: Option<::prost_types::Timestamp>) -> TTimestamp {
      match ts {
          Some(timestamp) => TTimestamp {
-@@ -518,10 +529,37 @@ impl REClient {
+@@ -589,10 +600,37 @@ impl REClient {
  
      pub async fn write_action_result(
          &self,
@@ -193,18 +229,18 @@ index 486f12883..e4db6362c 100644
      }
  
      pub async fn execute_with_progress(
-@@ -686,11 +724,21 @@ impl REClient {
+@@ -758,11 +796,22 @@ impl REClient {
  
      pub async fn upload_blob(
          &self,
 -        _blob: Vec<u8>,
 -        _metadata: RemoteExecutionMetadata,
--    ) -> anyhow::Result<TDigest> {
--        // TODO(aloiscochard)
--        Err(anyhow::anyhow!("Not implemented (RE upload_blob)"))
 +        blob: InlinedBlobWithDigest,
 +        metadata: RemoteExecutionMetadata,
-+    ) -> anyhow::Result<()> {
+     ) -> anyhow::Result<TDigest> {
+-        // TODO(aloiscochard)
+-        Err(anyhow::anyhow!("Not implemented (RE upload_blob)"))
++        let digest = blob.digest.clone();
 +        self.upload(
 +            metadata,
 +            UploadRequest {
@@ -216,11 +252,11 @@ index 486f12883..e4db6362c 100644
 +            },
 +        )
 +        .await?;
-+        Ok(())
++        Ok(digest)
      }
  
      pub async fn download(
-@@ -820,7 +868,119 @@ impl REClient {
+@@ -912,7 +961,119 @@ impl REClient {
      }
  }
  
@@ -270,7 +306,6 @@ index 486f12883..e4db6362c 100644
 +fn convert_taction_result_to_rbe(taction_result: TActionResult2) -> anyhow::Result<ActionResult> {
 +    let TActionResult2 {
 +        output_files,
-+        output_symlinks,
 +        output_directories,
 +        exit_code,
 +        stdout_raw,
@@ -280,6 +315,7 @@ index 486f12883..e4db6362c 100644
 +        execution_metadata,
 +        auxiliary_metadata: _,
 +        _dot_dot_default,
++        output_symlinks: _,
 +    } = taction_result;
 +
 +    let execution_metadata = convert_execution_action_metadata_to_rbe(execution_metadata)?;
@@ -341,7 +377,7 @@ index 486f12883..e4db6362c 100644
          .execution_metadata
          .with_context(|| "The execution metadata are not defined.")?;
 diff --git a/remote_execution/oss/re_grpc/src/response.rs b/remote_execution/oss/re_grpc/src/response.rs
-index 6348a1a73..711e10fda 100644
+index 16f37ad27..f98adf5ed 100644
 --- a/remote_execution/oss/re_grpc/src/response.rs
 +++ b/remote_execution/oss/re_grpc/src/response.rs
 @@ -91,6 +91,9 @@ pub struct TSubsysPerfCount {
