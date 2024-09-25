@@ -23,14 +23,15 @@ def main():
             "nix",
             "eval",
             "--json",
-            "--apply", "hs: builtins.map (h: h.drvPath) (builtins.attrValues hs)",
+            #"--apply", "hs: builtins.map (h: h.drvPath) (builtins.attrValues hs)",
             "--no-update-lock-file",
             "--no-use-registries",
             args.flake,
         ]
     )
 
-    drvs = json.loads(out)
+    drvs = json.loads(out).values()
+    #drvs = json.loads(out)
 
     subprocess.run(
         ["nix", "derivation", "show", "--stdin"],

@@ -19,7 +19,7 @@
           };
         };
         lib = pkgs.lib;
-        compilerName = import ./compiler.nix;
+        compilerName = "ghc98";
         hsPkgs = pkgs.haskell.packages.${compilerName};
         buck2BuildInputs = [
           pkgs.bash
@@ -35,7 +35,10 @@
 
         toolchainLibraries = import ./ghc-toolchain-libraries.nix;
 
-        ghcWithPackages = import ./ghc-with-packages.nix { inherit (pkgs) haskell; inherit toolchainLibraries; };
+        ghcWithPackages = import ./ghc-with-packages.nix {
+          inherit (pkgs) haskell;
+          inherit toolchainLibraries;
+        };
 
         haddock-one-shot = hsPkgs.callPackage ./haddock-one-shot.nix { };
         haddock = pkgs.writeShellScriptBin "haddock" ''
@@ -43,36 +46,20 @@
           exec ${haddock-one-shot}/bin/haddock -B "$libdir" -l "$libdir" "''${@}"
         '';
 
-        haskellPackages =
-          builtins.listToAttrs (builtins.map (p: { "name" = p.pname; "value" = p; }) haskellLibraries);
-
-        haskellLibraries =
-          let
-            packages = builtins.map (n: hsPkgs."${n}") toolchainLibraries;
-            isHaskellLibrary = p: p ? isHaskellLibrary;
-          in
-          builtins.filter isHaskellLibrary (lib.closePropagation packages);
+        haskellPackages = let
+          packages = builtins.map (n: hsPkgs."${n}") toolchainLibraries;
+          isHaskellLibrary = p: p ? isHaskellLibrary;
+        in
+          builtins.listToAttrs (
+            builtins.map (p: {
+              "name" = p.pname;
+              "value" = p.drvPath;
+            })
+            (builtins.filter isHaskellLibrary (pkgs.lib.closePropagation packages))
+          );
       in
       {
-        apps.dockerBuild =
-          { program = "${self.packages.${system}.dockerImage}"; type = "app"; };
-
         packages = {
-          dockerImage =
-            let
-              inherit (pkgs) dockerTools;
-              inherit (self.packages.${system}) bash ghc cxx python;
-            in
-            dockerTools.streamNixShellImage {
-              name = "nix-build";
-              drv = pkgs.mkShell.override { stdenv = pkgs.stdenvNoCC; }
-                {
-                  PATH = pkgs.lib.makeBinPath [ pkgs.bash pkgs.coreutils ];
-                  nativeBuildInputs = [ bash cxx ghc haddock python ] ++ haskellLibraries;
-                };
-              tag = "latest";
-            };
-
           inherit ghcWithPackages haddock haskellPackages;
           inherit (hsPkgs) ghc;
 

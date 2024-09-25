@@ -215,6 +215,13 @@ self: super: let
       url = "https://gitlab.haskell.org/torsten.schmits/ghc/-/commit/8a58e4aefe2684f4f913bd3423a0b3c4d36fa5af.diff";
       hash = "sha256-QQvY9n0q+JkOv40MHj3BxNz6vvjxTnKaKGPwBA0HYZo=";
     })
+
+    # --show-iface-abi-hash
+    # https://gitlab.haskell.org/ghc/ghc/-/tree/wip/show-iface-abi-hash?ref_type=heads
+    (self.fetchpatch {
+      url = "https://gitlab.haskell.org/ghc/ghc/-/commit/a833390f7ace8531a6b261b1f87f74d8a510a19f.diff";
+      hash = "sha256-YqI0E63zUb+q63h99PrsmC5sufafo+fNQKFpmMf6x1c=";
+    })
   ];
 in {
   haskell =
