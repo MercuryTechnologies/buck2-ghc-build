@@ -62,6 +62,7 @@
       };
 
       devShells = rec {
+        default = buck2;
         buck2 = pkgs.mkShell {
           name = "buck2-shell";
           packages = buck2BuildInputs ++ [
