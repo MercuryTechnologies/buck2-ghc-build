@@ -153,8 +153,6 @@ genrule(
     cmd = "$(location :genprimopcode) --make-haskell-source < $(location :primops.txt) > ../out/GHC/Prim.hs",
 )
 
-# NOTE: GHC.Prim and GHC.Types are mutually recursive.
-#       Until we figure out how, we rely on external ghc-prim.
 haskell_library(
     name = "ghc-prim",
     use_same_package_name = True,
