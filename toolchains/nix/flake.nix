@@ -108,6 +108,7 @@
                 makeWrapper "$NIX_CC/bin/$CXX" "$out/bin/c++" "''${MAPFILE[@]}"
               '';
             };
+          hsc2hs = pkgs.haskellPackages.hsc2hs;
           python = pkgs.python3;
         };
       });
