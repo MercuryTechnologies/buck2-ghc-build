@@ -278,6 +278,7 @@ haskell_library(
         "ghc/libraries/ghc-internal/src/GHC/Internal/ByteOrder.hs",
         "ghc/libraries/ghc-internal/src/GHC/Internal/ByteOrder.hs-boot",
         "ghc/libraries/ghc-internal/src/GHC/Internal/Char.hs",
+        "ghc/libraries/ghc-internal/src/GHC/Internal/Conc/Bound.hs",
         "ghc/libraries/ghc-internal/src/GHC/Internal/Conc/IO.hs",
         "ghc/libraries/ghc-internal/src/GHC/Internal/Conc/Signal.hs",
         "ghc/libraries/ghc-internal/src/GHC/Internal/Conc/Sync.hs",
@@ -339,6 +340,7 @@ haskell_library(
         "ghc/libraries/ghc-internal/src/GHC/Internal/Enum.hs-boot",
         "ghc/libraries/ghc-internal/src/GHC/Internal/Environment.hs",
         "ghc/libraries/ghc-internal/src/GHC/Internal/Err.hs",
+        "ghc/libraries/ghc-internal/src/GHC/Internal/Event.hs",
         "ghc/libraries/ghc-internal/src/GHC/Internal/Event/Arr.hs",
         "ghc/libraries/ghc-internal/src/GHC/Internal/Event/Array.hs",
         "ghc/libraries/ghc-internal/src/GHC/Internal/Event/Control.hs",
@@ -440,6 +442,7 @@ haskell_library(
         "ghc/libraries/ghc-internal/src/GHC/Internal/Num.hs",
         "ghc/libraries/ghc-internal/src/GHC/Internal/Num.hs-boot",
         "ghc/libraries/ghc-internal/src/GHC/Internal/Numeric.hs",
+        "ghc/libraries/ghc-internal/src/GHC/Internal/Numeric/Natural.hs",
         "ghc/libraries/ghc-internal/src/GHC/Internal/OverloadedLabels.hs",
         "ghc/libraries/ghc-internal/src/GHC/Internal/Pack.hs",
         "ghc/libraries/ghc-internal/src/GHC/Internal/Profiling.hs",
@@ -512,11 +515,44 @@ haskell_library(
     ],
 )
 
+[ genrule(
+    name = nm,
+    srcs = glob([
+        "ghc/libraries/base/src/" + srcfile,
+        # for now
+        "ghcautoconf.h",
+        "ghcplatform.h",
+        "EventConfig.h",
+        "HsBaseConfig.h",
+        "ghc/rts/**/*",
+    ]),
+    out = nm,
+    # for now, all hard-coded paths.
+    cmd = '''
+export PATH=/nix/store/sa6hywsm1mqfyd1xakyzv4ljjsb3hawh-clang-wrapper-11.1.0/bin:$PATH
+echo $PATH > /dev/stderr
+/Users/ianwookim/repo/srcc/ghcHEAD/_build/stage1/bin/hsc2hs -Ighc/rts/include -Ighc/libraries/ghc-internal/include -I. ghc/libraries/base/src/{} -o ../out/{}
+'''.format(srcfile, nm),
+  )
+  for nm, srcfile in [
+    ("System/CPUTime.hs", "System/CPUTime.hsc"),
+    ("System/CPUTime/Posix/RUsage.hs", "System/CPUTime/Posix/RUsage.hsc")
+    #("System/CPUTime.hs", "System/CPUTime.hsc")
+  ]
+]
+
 haskell_library(
     name = "base",
     srcs = [
+        ":System/CPUTime.hs",
+        ":System/CPUTime/Posix/RUsage.hs",
+        "ghc/libraries/base/src/Control/Concurrent.hs",
+        "ghc/libraries/base/src/Control/Concurrent/Chan.hs",
+        "ghc/libraries/base/src/Control/Concurrent/QSem.hs",
+        "ghc/libraries/base/src/Control/Concurrent/QSemN.hs",
         "ghc/libraries/base/src/Data/Bits.hs",
         "ghc/libraries/base/src/Data/Bool.hs",
+        "ghc/libraries/base/src/Data/Char.hs",
         "ghc/libraries/base/src/Data/Coerce.hs",
         "ghc/libraries/base/src/Data/Data.hs",
         "ghc/libraries/base/src/Data/Dynamic.hs",
@@ -537,6 +573,7 @@ haskell_library(
         "ghc/libraries/base/src/Data/Monoid.hs",
         "ghc/libraries/base/src/Data/Ord.hs",
         "ghc/libraries/base/src/Data/Proxy.hs",
+        "ghc/libraries/base/src/Data/Ratio.hs",
         "ghc/libraries/base/src/Data/STRef.hs",
         "ghc/libraries/base/src/Data/STRef/Strict.hs",
         "ghc/libraries/base/src/Data/String.hs",
@@ -674,6 +711,13 @@ haskell_library(
         "ghc/libraries/base/src/GHC/Weak/Finalize.hs",
         "ghc/libraries/base/src/GHC/Word.hs",
         "ghc/libraries/base/src/Prelude.hs",
+        "ghc/libraries/base/src/Text/Printf.hs",
+        "ghc/libraries/base/src/System/CPUTime/Utils.hs",
+        "ghc/libraries/base/src/System/Console/GetOpt.hs",
+        "ghc/libraries/base/src/System/IO/Unsafe.hs",
+        "ghc/libraries/base/src/System/Info.hs",
+        "ghc/libraries/base/src/System/Mem/Weak.hs",
+        "ghc/libraries/base/src/System/Timeout.hs",
     ],
     srcs_deps = {
     },
@@ -686,6 +730,8 @@ haskell_library(
         #"ghc-internal",
         "-this-unit-id",
         "base",
+        "-Ighc-build/ghc/libraries/ghc-internal/include",
+        "-Ighc-build",
     ],
     visibility = ["PUBLIC"],
     deps = [
