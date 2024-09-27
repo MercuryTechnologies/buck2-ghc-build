@@ -187,15 +187,9 @@ haskell_library(
         "-Wno-trustworthy-safe",
         "-this-unit-id",
         "ghc-prim",
-        "-hidir",
-        "/Users/ianwookim/repo/srcc/ghcHEAD/_build/stage1/libraries/ghc-prim/build",
-        "-odir",
-        "/Users/ianwookim/repo/srcc/ghcHEAD/_build/stage1/libraries/ghc-prim/build",
     ],
-    # default_ghc_flags,
     visibility = ["PUBLIC"],
     deps = [
-    #    "//haskell:base",
     ],
 )
 
