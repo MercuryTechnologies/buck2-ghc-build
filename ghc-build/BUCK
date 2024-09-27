@@ -147,33 +147,49 @@ cp $(location :primop-vector-tycons.hs-incl) ../out/primop_headers
 )
 
 genrule(
-    name = "GHC.Prim.hs",
+    name = "GHC/Prim.hs",
     srcs = [":primops.txt"],
-    out = "GHC.Prim.hs",
-    cmd = "$(location :genprimopcode) --make-haskell-source < $(location :primops.txt) > ../out/GHC.Prim.hs",
+    out = "GHC/Prim.hs",
+    cmd = "$(location :genprimopcode) --make-haskell-source < $(location :primops.txt) > ../out/GHC/Prim.hs",
 )
 
-# NOTE: GHC.Prim and GHC.Types are mutually recursive. It seesm like a bug.
-#       Until we figure out how, we rely on external ghc-prim.
-#haskell_library(
-#    name = "ghc-prim",
-#    srcs = [
-#        ":GHC.Prim.hs",
-#        "ghc/libraries/ghc-prim/GHC/Classes.hs",
-#        "ghc/libraries/ghc-prim/GHC/CString.hs",
-#        "ghc/libraries/ghc-prim/GHC/Magic.hs",
-#        "ghc/libraries/ghc-prim/GHC/Magic/Dict.hs",
-#        "ghc/libraries/ghc-prim/GHC/Prim/Ext.hs",
-#        "ghc/libraries/ghc-prim/GHC/Prim/PtrEq.hs",
-#        "ghc/libraries/ghc-prim/GHC/Tuple.hs",
-#        "ghc/libraries/ghc-prim/GHC/Types.hs",
-#    ],
-#    compiler_flags = default_ghc_flags,
-#    visibility = ["PUBLIC"],
-#    deps = [
-#        "//haskell:base",
-#    ],
-#)
+haskell_library(
+    name = "ghc-prim",
+    use_same_package_name = True,
+    srcs = [
+        "ghc/libraries/ghc-prim/GHC/Classes.hs",
+        "ghc/libraries/ghc-prim/GHC/CString.hs",
+        "ghc/libraries/ghc-prim/GHC/Debug.hs",
+        "ghc/libraries/ghc-prim/GHC/Magic.hs",
+        "ghc/libraries/ghc-prim/GHC/Magic/Dict.hs",
+        "ghc/libraries/ghc-prim/GHC/Prim/Exception.hs",
+        "ghc/libraries/ghc-prim/GHC/Prim/Ext.hs",
+        "ghc/libraries/ghc-prim/GHC/Prim/PtrEq.hs",
+        "ghc/libraries/ghc-prim/GHC/Tuple.hs",
+        "ghc/libraries/ghc-prim/GHC/Types.hs",
+    ],
+    virtual_modules = ["GHC.Prim"],
+    compiler_flags = [
+        "-XHaskell2010",
+        "-XBangPatterns",
+        "-XCPP",
+        "-XDeriveGeneric",
+        "-XMagicHash",
+        "-XMultiParamTypeClasses",
+        "-XNoImplicitPrelude",
+        "-XStandaloneDeriving",
+        #"-XTrustworthy",
+        "-XTypeFamilies",
+        "-XUnboxedTuples",
+        "-XUnliftedFFITypes",
+        "-Wno-trustworthy-safe",
+        "-this-unit-id",
+        "ghc-prim",
+    ],
+    visibility = ["PUBLIC"],
+    deps = [
+    ],
+)
 
 haskell_library(
     name = "ghc-bignum",
@@ -202,7 +218,7 @@ haskell_library(
     ],
     visibility = ["PUBLIC"],
     deps = [
-        "//haskell:ghc-prim",
+        ":ghc-prim",
     ],
 )
 
@@ -448,8 +464,8 @@ haskell_library(
     #default_ghc_flags
     visibility = ["PUBLIC"],
     deps = [
-        "//haskell:ghc-prim",
-        "//ghc-build:ghc-bignum",
+        ":ghc-prim",
+        ":ghc-bignum",
     ],
 )
 
