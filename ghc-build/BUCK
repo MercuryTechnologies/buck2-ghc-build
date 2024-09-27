@@ -557,6 +557,7 @@ $(exe //toolchains:hsc2hs) -Ighc/rts/include -Ighc/libraries/ghc-internal/includ
   )
   for nm, srcfile in [
     ("System/CPUTime.hs", "System/CPUTime.hsc"),
+    ("System/CPUTime/Posix/ClockGetTime.hs", "System/CPUTime/Posix/ClockGetTime.hsc"),
     ("System/CPUTime/Posix/RUsage.hs", "System/CPUTime/Posix/RUsage.hsc")
     #("System/CPUTime.hs", "System/CPUTime.hsc")
   ]
@@ -567,6 +568,7 @@ haskell_library(
     use_same_package_name = True,
     srcs = [
         ":System/CPUTime.hs",
+        ":System/CPUTime/Posix/ClockGetTime.hs",
         ":System/CPUTime/Posix/RUsage.hs",
         "ghc/libraries/base/src/Control/Applicative.hs",
         "ghc/libraries/base/src/Control/Concurrent.hs",
