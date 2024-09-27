@@ -149,32 +149,8 @@ self: super: let
     # add -dep-json flag for emitting machine-readable dependency info
     # https://gitlab.haskell.org/ghc/ghc/-/merge_requests/11994
     (self.fetchpatch {
-      url = "https://gitlab.haskell.org/ghc/ghc/-/commit/3f8561605ac59a8b606ebb8e958665a0ad6beed4.diff";
-      hash = "sha256-TuhNi5ELOMELyJXIdCd33YIk03U/g9TAaKiHQIUWprc=";
-    })
-    (self.fetchpatch {
-      url = "https://gitlab.haskell.org/ghc/ghc/-/commit/cd7b9ed149cecc1094624b406f4ce3845967ad7b.diff";
-      hash = "sha256-T8Z8sKJvXj16JH1gzf1oG6/53cMiuGY293xFvVsQ3SQ=";
-    })
-    (self.fetchpatch {
-      url = "https://gitlab.haskell.org/ghc/ghc/-/commit/1c28ebb4c2ca1af620e9d9ad59ca37b558a286ec.diff";
-      hash = "sha256-KN7r9Le+wk36WrGsSOPhCq69mU6VxvVvi4ZqHvOFaKU=";
-    })
-    (self.fetchpatch {
-      url = "https://gitlab.haskell.org/ghc/ghc/-/commit/e24d6b3f4efe8d0b0934b5fbb13fd9f383236129.diff";
-      hash = "sha256-UHNqeQtg3Nk019b8YmG8PYddbjhIYzip5QP72w5XWYs=";
-    })
-    (self.fetchpatch {
-      url = "https://gitlab.haskell.org/ghc/ghc/-/commit/81d811442fa207a87bc88a2eaf66b60fe7b6412b.diff";
-      hash = "sha256-jPfoIzCy6bcj7jZ9pjpWt/GRlz2Tusp80uUchgGynHQ=";
-    })
-    (self.fetchpatch {
-      url = "https://gitlab.haskell.org/ghc/ghc/-/commit/acc91af4a18cd3a742e3718f770066e0018903c0.diff";
-      hash = "sha256-2met3x0mthK+S3K3dBnlBCvkxusxIxoHaKJj2DiE7/E=";
-    })
-    (self.fetchpatch {
-      url = "https://gitlab.haskell.org/ghc/ghc/-/commit/6f82305420f4e64b3c365997447e86b8d1765977.diff";
-      hash = "sha256-rBcko7Pakay/OfKwR89un7joT5dOUlnFyuJt1G+bZkI=";
+      url = "https://gitlab.haskell.org/wavewave/ghc/-/commit/66cd9e04194e34a9bea8c718c994a853686ebfc9.diff";
+      hash = "sha256-Z+NSblpX0J9SowW1kampcIElzo0pVzNHvLl0t6V6iRk=";
     })
 
     # refactor quadratic search in warnMissingHomeModules
@@ -214,6 +190,20 @@ self: super: let
     (self.fetchpatch {
       url = "https://gitlab.haskell.org/torsten.schmits/ghc/-/commit/8a58e4aefe2684f4f913bd3423a0b3c4d36fa5af.diff";
       hash = "sha256-QQvY9n0q+JkOv40MHj3BxNz6vvjxTnKaKGPwBA0HYZo=";
+    })
+
+    # --show-iface-abi-hash
+    # https://gitlab.haskell.org/ghc/ghc/-/tree/wip/show-iface-abi-hash?ref_type=heads
+    (self.fetchpatch {
+      url = "https://gitlab.haskell.org/ghc/ghc/-/commit/a833390f7ace8531a6b261b1f87f74d8a510a19f.diff";
+      hash = "sha256-YqI0E63zUb+q63h99PrsmC5sufafo+fNQKFpmMf6x1c=";
+    })
+
+    # finder: Add `IsBootInterface` to finder cache keys
+    # https://gitlab.haskell.org/ghc/ghc/-/merge_requests/13237
+    (self.fetchpatch {
+      url = "https://gitlab.haskell.org/wavewave/ghc/-/commit/27463f979831531b816f25e118b20a2d02505bf3.diff";
+      hash = "sha256-rUH3FipJLk+sSbaC3B9wf93gjKlhacDX59Hwb8G4a1U=";
     })
   ];
 in {

@@ -2,7 +2,7 @@ self: super:
 
 let
 
-  compilerName = import ../compiler.nix;
+  compilerName = "ghc98";
   hackage-index = import ../hackage-index.nix;
 
   inherit
