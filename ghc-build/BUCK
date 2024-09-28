@@ -243,11 +243,13 @@ echo $PATH > /dev/stderr
   )
   for nm, srcfile in [
     ("GHC/Internal/Clock.hs", "GHC/Internal/Clock.hsc"),
+    ("GHC/Internal/Event/EPoll.hs", "GHC/Internal/Event/EPoll.hsc"),
     ("GHC/Internal/Event/KQueue.hs", "GHC/Internal/Event/KQueue.hsc"),
     ("GHC/Internal/Event/Poll.hs", "GHC/Internal/Event/Poll.hsc"),
     ("GHC/Internal/ExecutionStack/Internal.hs", "GHC/Internal/ExecutionStack/Internal.hsc"),
     ("GHC/Internal/InfoProv/Types.hs", "GHC/Internal/InfoProv/Types.hsc"),
     ("GHC/Internal/IO/Handle/Lock/Flock.hs", "GHC/Internal/IO/Handle/Lock/Flock.hsc"),
+    ("GHC/Internal/IO/Handle/Lock/LinuxOFD.hs", "GHC/Internal/IO/Handle/Lock/LinuxOFD.hsc"),
     ("GHC/Internal/Stack/CCS.hs", "GHC/Internal/Stack/CCS.hsc"),
   ]
 ]
@@ -259,9 +261,11 @@ haskell_library(
         ":GHC/Internal/Clock.hs",
         ":GHC/Internal/Event/KQueue.hs",
         ":GHC/Internal/Event/Poll.hs",
+        ":GHC/Internal/Event/EPoll.hs",
         ":GHC/Internal/ExecutionStack/Internal.hs",
         ":GHC/Internal/InfoProv/Types.hs",
         ":GHC/Internal/IO/Handle/Lock/Flock.hs",
+        ":GHC/Internal/IO/Handle/Lock/LinuxOFD.hs",
         ":GHC/Internal/Stack/CCS.hs",
         "ghc/libraries/ghc-internal/src/GHC/Internal/Arr.hs",
         "ghc/libraries/ghc-internal/src/GHC/Internal/Base.hs",
