@@ -851,9 +851,6 @@ haskell_library(
         #"-XTrustworthy",
         "-XUnboxedTuples",
         "-XUnliftedFFITypes",
-        # base is hidden
-        "-package",
-        "base",
         "-this-unit-id",
         "array",
     ],
@@ -882,9 +879,6 @@ haskell_library(
         "-XPolyKinds",
         "-XSafe",
         "-XTypeOperators",
-        # base is hidden
-        #"-package",
-        #"base",
         "-this-unit-id",
         "deepseq",
     ],
