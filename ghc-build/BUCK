@@ -252,7 +252,7 @@ echo $PATH > /dev/stderr
     ("GHC/Internal/InfoProv/Types.hs", "GHC/Internal/InfoProv/Types.hsc"),
     ("GHC/Internal/IO/Handle/Lock/Flock.hs", "GHC/Internal/IO/Handle/Lock/Flock.hsc"),
     ("GHC/Internal/IO/Handle/Lock/LinuxOFD.hs", "GHC/Internal/IO/Handle/Lock/LinuxOFD.hsc"),
-    ("GHC/Internal/RTS/Flags.hs", "GHC/Internal/RTS/Flags.hsc"),    
+    ("GHC/Internal/RTS/Flags.hs", "GHC/Internal/RTS/Flags.hsc"),
     ("GHC/Internal/Stack/CCS.hs", "GHC/Internal/Stack/CCS.hsc"),
     ("GHC/Internal/Stats.hs", "GHC/Internal/Stats.hsc"),
     ("GHC/Internal/System/Environment/Blank.hs", "GHC/Internal/System/Environment/Blank.hsc"),
@@ -272,7 +272,7 @@ haskell_library(
         ":GHC/Internal/InfoProv/Types.hs",
         ":GHC/Internal/IO/Handle/Lock/Flock.hs",
         ":GHC/Internal/IO/Handle/Lock/LinuxOFD.hs",
-        ":GHC/Internal/RTS/Flags.hs",        
+        ":GHC/Internal/RTS/Flags.hs",
         ":GHC/Internal/Stack/CCS.hs",
         ":GHC/Internal/Stats.hs",
         ":GHC/Internal/System/Environment/Blank.hs",
@@ -760,10 +760,6 @@ haskell_library(
     compiler_flags = [
         "-XHaskell2010",
         "-XNoImplicitPrelude",
-        #"-package",
-        #"ghc-prim",
-        #"-package",
-        #"ghc-internal",
         "-this-unit-id",
         "base",
         "-Ighc-build/ghc/libraries/ghc-internal/include",
@@ -773,7 +769,7 @@ haskell_library(
     deps = [
         ":ghc-internal",
         ":ghc-prim",
-        # ??
+        # not clear why this is needed.
         ":ghc-bignum",
     ],
 )
