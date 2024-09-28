@@ -501,8 +501,12 @@ haskell_library(
         "ghc/libraries/ghc-internal/src/GHC/Internal/Weak.hs",
         "ghc/libraries/ghc-internal/src/GHC/Internal/Weak/Finalize.hs",
         "ghc/libraries/ghc-internal/src/GHC/Internal/Word.hs",
-        "ghc/libraries/ghc-internal/include/ieee-flpt.h",
-    ], #glob(["ghc/libraries/ghc-internal/**/*.hs"]),
+    ],
+    srcs_deps = {
+        "ghc/libraries/ghc-internal/src/GHC/Internal/Float.hs": [
+            "ghc/libraries/ghc-internal/include/ieee-flpt.h"
+        ],
+    },
     compiler_flags = [
         "-XHaskell2010",
         "-XNoImplicitPrelude",
