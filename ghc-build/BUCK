@@ -890,7 +890,32 @@ haskell_library(
     ],
 )
 
-
+haskell_library(
+    name = "pretty",
+    srcs = [
+        "ghc/libraries/pretty/src/Text/PrettyPrint.hs",
+        "ghc/libraries/pretty/src/Text/PrettyPrint/HughesPJ.hs",
+        "ghc/libraries/pretty/src/Text/PrettyPrint/HughesPJClass.hs",
+        "ghc/libraries/pretty/src/Text/PrettyPrint/Annotated.hs",
+        "ghc/libraries/pretty/src/Text/PrettyPrint/Annotated/HughesPJ.hs",
+        "ghc/libraries/pretty/src/Text/PrettyPrint/Annotated/HughesPJClass.hs",
+    ],
+    srcs_deps = {
+    },
+    compiler_flags = [
+        "-XBangPatterns",
+        "-XCPP",
+        "-XDeriveGeneric",
+        "-this-unit-id",
+        "pretty",
+    ],
+    visibility = ["PUBLIC"],
+    deps = [
+        ":base",
+        ":deepseq",
+        ":ghc-prim",
+    ],
+)
 
 haskell_library(
     name = "ghc",
