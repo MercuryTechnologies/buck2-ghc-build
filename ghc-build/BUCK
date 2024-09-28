@@ -918,6 +918,35 @@ haskell_library(
 )
 
 haskell_library(
+    name = "ghc-boot-th",
+    srcs = [
+        "ghc/libraries/ghc-boot-th/GHC/ForeignSrcLang/Type.hs",
+        "ghc/libraries/ghc-boot-th/GHC/Internal/TH/Lib/Map.hs",
+        "ghc/libraries/ghc-boot-th/GHC/Internal/TH/Ppr.hs",
+        "ghc/libraries/ghc-boot-th/GHC/Internal/TH/PprLib.hs",
+        "ghc/libraries/ghc-boot-th/GHC/LanguageExtensions/Type.hs",
+        "ghc/libraries/ghc-boot-th/GHC/Lexeme.hs",
+    ],
+    srcs_deps = {
+    },
+    compiler_flags = [
+        "-XHaskell2010",
+        "-XDeriveGeneric",
+        "-XNoImplicitPrelude",
+        "-this-unit-id",
+        "ghc-boot-th",
+    ],
+    visibility = ["PUBLIC"],
+    deps = [
+        ":base",
+        ":ghc-prim",
+        ":pretty",
+        # not clear why this is needed (maybe due to re-export).
+        ":ghc-internal",
+    ],
+)
+
+haskell_library(
     name = "ghc",
     srcs = [
         ":GHC_Parser_Lexer_hs",
