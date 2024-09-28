@@ -445,6 +445,7 @@ haskell_library(
         "ghc/libraries/ghc-internal/src/GHC/Internal/Ix.hs",
         "ghc/libraries/ghc-internal/src/GHC/Internal/InfoProv.hs",
         "ghc/libraries/ghc-internal/src/GHC/Internal/LanguageExtensions.hs",
+        "ghc/libraries/ghc-internal/src/GHC/Internal/Lexeme.hs",
         "ghc/libraries/ghc-internal/src/GHC/Internal/List.hs",
         "ghc/libraries/ghc-internal/src/GHC/Internal/Maybe.hs",
         "ghc/libraries/ghc-internal/src/GHC/Internal/MVar.hs",
@@ -487,6 +488,8 @@ haskell_library(
         "ghc/libraries/ghc-internal/src/GHC/Internal/Text/Read/Lex.hs",
         "ghc/libraries/ghc-internal/src/GHC/Internal/Text/Read.hs",
         "ghc/libraries/ghc-internal/src/GHC/Internal/Text/Show.hs",
+        "ghc/libraries/ghc-internal/src/GHC/Internal/TH/Lib.hs",
+        "ghc/libraries/ghc-internal/src/GHC/Internal/TH/Lift.hs",
         "ghc/libraries/ghc-internal/src/GHC/Internal/TH/Syntax.hs",
         "ghc/libraries/ghc-internal/src/GHC/Internal/TopHandler.hs",
         "ghc/libraries/ghc-internal/src/GHC/Internal/Type/Reflection.hs",
@@ -590,20 +593,30 @@ haskell_library(
         "ghc/libraries/base/src/Control/Monad/ST/Unsafe.hs",
         "ghc/libraries/base/src/Control/Monad/IO/Class.hs",
         "ghc/libraries/base/src/Control/Monad/Zip.hs",
+        "ghc/libraries/base/src/Data/Array/Byte.hs",
+        "ghc/libraries/base/src/Data/Bifoldable.hs",
+        "ghc/libraries/base/src/Data/Bifunctor.hs",
+        "ghc/libraries/base/src/Data/Bitraversable.hs",
         "ghc/libraries/base/src/Data/Bits.hs",
         "ghc/libraries/base/src/Data/Bool.hs",
         "ghc/libraries/base/src/Data/Char.hs",
         "ghc/libraries/base/src/Data/Coerce.hs",
+        "ghc/libraries/base/src/Data/Complex.hs",
         "ghc/libraries/base/src/Data/Data.hs",
         "ghc/libraries/base/src/Data/Dynamic.hs",
         "ghc/libraries/base/src/Data/Either.hs",
         "ghc/libraries/base/src/Data/Eq.hs",
         "ghc/libraries/base/src/Data/Enum.hs",
+        "ghc/libraries/base/src/Data/Fixed.hs",
         "ghc/libraries/base/src/Data/Foldable.hs",
         "ghc/libraries/base/src/Data/Function.hs",
         "ghc/libraries/base/src/Data/Functor.hs",
+        "ghc/libraries/base/src/Data/Functor/Classes.hs",
+        "ghc/libraries/base/src/Data/Functor/Compose.hs",
         "ghc/libraries/base/src/Data/Functor/Const.hs",
         "ghc/libraries/base/src/Data/Functor/Identity.hs",
+        "ghc/libraries/base/src/Data/Functor/Product.hs",
+        "ghc/libraries/base/src/Data/Functor/Sum.hs",
         "ghc/libraries/base/src/Data/IORef.hs",
         "ghc/libraries/base/src/Data/Int.hs",
         "ghc/libraries/base/src/Data/Ix.hs",
@@ -615,6 +628,7 @@ haskell_library(
         "ghc/libraries/base/src/Data/Ord.hs",
         "ghc/libraries/base/src/Data/Proxy.hs",
         "ghc/libraries/base/src/Data/Ratio.hs",
+        "ghc/libraries/base/src/Data/Semigroup.hs",
         "ghc/libraries/base/src/Data/STRef.hs",
         "ghc/libraries/base/src/Data/STRef/Strict.hs",
         "ghc/libraries/base/src/Data/String.hs",
@@ -805,6 +819,7 @@ haskell_library(
 
 haskell_library(
     name = "array",
+    use_same_package_name = True,
     srcs = [
         "ghc/libraries/array/Data/Array.hs",
         "ghc/libraries/array/Data/Array/Base.hs",
@@ -845,6 +860,39 @@ haskell_library(
     visibility = ["PUBLIC"],
     deps = [
         ":base",
+    ],
+)
+
+haskell_library(
+    name = "deepseq",
+    srcs = [
+        "ghc/libraries/deepseq/Control/DeepSeq.hs",
+    ],
+    srcs_deps = {
+    },
+    compiler_flags = [
+        "-XBangPatterns",
+        "-XCPP",
+        "-XDefaultSignatures",
+        "-XEmptyCase",
+        "-XFlexibleContexts",
+        "-XFlexibleInstances",
+        "-XGADTs",
+        "-XMultiParamTypeClasses",
+        "-XPolyKinds",
+        "-XSafe",
+        "-XTypeOperators",
+        # base is hidden
+        #"-package",
+        #"base",
+        "-this-unit-id",
+        "deepseq",
+    ],
+    visibility = ["PUBLIC"],
+    deps = [
+        ":array",
+        ":base",
+        ":ghc-prim",
     ],
 )
 
