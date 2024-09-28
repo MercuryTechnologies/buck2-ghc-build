@@ -490,6 +490,7 @@ haskell_library(
         "ghc/libraries/ghc-internal/src/GHC/Internal/Text/Show.hs",
         "ghc/libraries/ghc-internal/src/GHC/Internal/TH/Lib.hs",
         "ghc/libraries/ghc-internal/src/GHC/Internal/TH/Lift.hs",
+        "ghc/libraries/ghc-internal/src/GHC/Internal/TH/Quote.hs",
         "ghc/libraries/ghc-internal/src/GHC/Internal/TH/Syntax.hs",
         "ghc/libraries/ghc-internal/src/GHC/Internal/TopHandler.hs",
         "ghc/libraries/ghc-internal/src/GHC/Internal/Type/Reflection.hs",
@@ -941,6 +942,48 @@ haskell_library(
         ":base",
         ":ghc-prim",
         ":pretty",
+        # not clear why this is needed (maybe due to re-export).
+        ":ghc-internal",
+    ],
+)
+
+haskell_library(
+    name = "template-haskell",
+    srcs = [
+        "ghc/libraries/template-haskell/Language/Haskell/TH.hs",
+        "ghc/libraries/template-haskell/Language/Haskell/TH/Lib.hs",
+        "ghc/libraries/template-haskell/Language/Haskell/TH/Lib/Internal.hs",
+        "ghc/libraries/template-haskell/Language/Haskell/TH/Ppr.hs",
+        "ghc/libraries/template-haskell/Language/Haskell/TH/PprLib.hs",
+        "ghc/libraries/template-haskell/Language/Haskell/TH/Quote.hs",
+        "ghc/libraries/template-haskell/Language/Haskell/TH/Syntax.hs",
+        "ghc/libraries/template-haskell/Language/Haskell/TH/LanguageExtensions.hs",
+        "ghc/libraries/template-haskell/Language/Haskell/TH/CodeDo.hs",
+        # vendored-filepath
+        "ghc/libraries/template-haskell/vendored-filepath/System/FilePath.hs",
+        "ghc/libraries/template-haskell/vendored-filepath/System/FilePath/Posix.hs",
+        "ghc/libraries/template-haskell/vendored-filepath/System/FilePath/Windows.hs",
+],
+    srcs_deps = {
+    },
+    compiler_flags = [
+        "-XHaskell2010",
+        "-XBangPatterns",
+        "-XCPP",
+        "-XDefaultSignatures",
+        "-XDeriveDataTypeable",
+        "-XDeriveGeneric",
+        "-XFlexibleInstances",
+        "-XRankNTypes",
+        "-XRoleAnnotations",
+        "-XScopedTypeVariables",
+        "-this-unit-id",
+        "template-haskell",
+    ],
+    visibility = ["PUBLIC"],
+    deps = [
+        ":base",
+        ":ghc-boot-th",
         # not clear why this is needed (maybe due to re-export).
         ":ghc-internal",
     ],
