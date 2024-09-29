@@ -893,6 +893,7 @@ haskell_library(
 
 haskell_library(
     name = "pretty",
+    use_same_package_name = True,
     srcs = [
         "ghc/libraries/pretty/src/Text/PrettyPrint.hs",
         "ghc/libraries/pretty/src/Text/PrettyPrint/HughesPJ.hs",
@@ -920,6 +921,7 @@ haskell_library(
 
 haskell_library(
     name = "ghc-boot-th",
+    use_same_package_name = True,
     srcs = [
         "ghc/libraries/ghc-boot-th/GHC/ForeignSrcLang/Type.hs",
         "ghc/libraries/ghc-boot-th/GHC/Internal/TH/Lib/Map.hs",
@@ -947,8 +949,11 @@ haskell_library(
     ],
 )
 
+### template-haskell
+
 haskell_library(
     name = "template-haskell",
+    use_same_package_name = True,
     srcs = [
         "ghc/libraries/template-haskell/Language/Haskell/TH.hs",
         "ghc/libraries/template-haskell/Language/Haskell/TH/Lib.hs",
@@ -963,7 +968,7 @@ haskell_library(
         "ghc/libraries/template-haskell/vendored-filepath/System/FilePath.hs",
         "ghc/libraries/template-haskell/vendored-filepath/System/FilePath/Posix.hs",
         "ghc/libraries/template-haskell/vendored-filepath/System/FilePath/Windows.hs",
-],
+    ],
     srcs_deps = {
     },
     compiler_flags = [
@@ -986,6 +991,121 @@ haskell_library(
         ":ghc-boot-th",
         # not clear why this is needed (maybe due to re-export).
         ":ghc-internal",
+    ],
+)
+
+### bytestring
+
+cxx_library(
+    name = "bytestring_cbits",
+    srcs = [
+        "ghc/libraries/bytestring/cbits/fpstring.c",
+        "ghc/libraries/bytestring/cbits/itoa.c",
+        "ghc/libraries/bytestring/cbits/shortbytestring.c",
+        "ghc/libraries/bytestring/cbits/aligned-static-hs-data.c",
+        # for now, currently aarch64 only.
+        "ghc/libraries/bytestring/cbits/aarch64/is-valid-utf8.c",
+    ],
+    headers = [
+        "ghc/libraries/bytestring/include/fpstring.h",
+        # for now.
+        "ghc/libraries/bytestring/include/bytestring-cpp-macros.h",
+        #
+    ],
+    compiler_flags = [
+        "-Ighc-build/ghc/libraries/bytestring/include",
+        "-Ighc-build/ghc/rts/include",
+        "-Ighc-build",
+    ],
+    link_style = "shared",
+    deps = [
+    ],
+    visibility = ["PUBLIC"],
+)
+
+haskell_library(
+    name = "bytestring",
+    use_same_package_name = True,
+    srcs = [
+        "ghc/libraries/bytestring/Data/ByteString.hs",
+        "ghc/libraries/bytestring/Data/ByteString/Char8.hs",
+        "ghc/libraries/bytestring/Data/ByteString/Unsafe.hs",
+        "ghc/libraries/bytestring/Data/ByteString/Internal.hs",
+        "ghc/libraries/bytestring/Data/ByteString/Lazy.hs",
+        "ghc/libraries/bytestring/Data/ByteString/Lazy/Char8.hs",
+        "ghc/libraries/bytestring/Data/ByteString/Lazy/Internal.hs",
+        "ghc/libraries/bytestring/Data/ByteString/Short.hs",
+        "ghc/libraries/bytestring/Data/ByteString/Short/Internal.hs",
+        "ghc/libraries/bytestring/Data/ByteString/Builder.hs",
+        "ghc/libraries/bytestring/Data/ByteString/Builder/Extra.hs",
+        "ghc/libraries/bytestring/Data/ByteString/Builder/Prim.hs",
+        "ghc/libraries/bytestring/Data/ByteString/Builder/RealFloat.hs",
+        "ghc/libraries/bytestring/Data/ByteString/Builder/Internal.hs",
+        "ghc/libraries/bytestring/Data/ByteString/Builder/Prim/Internal.hs",
+
+        # internal. need to be hidden later.
+        "ghc/libraries/bytestring/Data/ByteString/Builder/ASCII.hs",
+        "ghc/libraries/bytestring/Data/ByteString/Builder/Prim/ASCII.hs",
+        "ghc/libraries/bytestring/Data/ByteString/Builder/Prim/Binary.hs",
+        "ghc/libraries/bytestring/Data/ByteString/Builder/Prim/Internal/Base16.hs",
+        "ghc/libraries/bytestring/Data/ByteString/Builder/Prim/Internal/Floating.hs",
+        "ghc/libraries/bytestring/Data/ByteString/Builder/RealFloat/F2S.hs",
+        "ghc/libraries/bytestring/Data/ByteString/Builder/RealFloat/D2S.hs",
+        "ghc/libraries/bytestring/Data/ByteString/Builder/RealFloat/Internal.hs",
+        "ghc/libraries/bytestring/Data/ByteString/Builder/RealFloat/TableGenerator.hs",
+        "ghc/libraries/bytestring/Data/ByteString/Internal/Type.hs",
+        "ghc/libraries/bytestring/Data/ByteString/Lazy/ReadInt.hs",
+        "ghc/libraries/bytestring/Data/ByteString/Lazy/ReadNat.hs",
+        "ghc/libraries/bytestring/Data/ByteString/ReadInt.hs",
+        "ghc/libraries/bytestring/Data/ByteString/ReadNat.hs",
+        "ghc/libraries/bytestring/Data/ByteString/Utils/ByteOrder.hs",
+        "ghc/libraries/bytestring/Data/ByteString/Utils/UnalignedAccess.hs",
+
+        # only for pure
+        #"ghc/libraries/bytestring/Data/ByteString/Internal/Pure.hs",
+    ],
+    srcs_deps = {
+    },
+    compiler_flags = [
+        "-XHaskell2010",
+        "-XCPP",
+        "-XForeignFunctionInterface",
+        "-XBangPatterns",
+        "-XUnliftedFFITypes",
+        "-XMagicHash",
+        "-XUnboxedTuples",
+        "-XDeriveDataTypeable",
+        "-XScopedTypeVariables",
+        "-XRankNTypes",
+        "-XNamedFieldPuns",
+        "-Wall",
+        "-fwarn-tabs",
+        "-Wincomplete-uni-patterns",
+        "-optP",
+        "-Wall",
+        "-optP",
+        "-Werror=undef",
+        "-O2",
+        "-fmax-simplifier-iterations=10",
+        "-fdicts-cheap",
+        "-fspec-constr-count=6",
+        #
+        "-Ighc-build/ghc/libraries/bytestring/include",
+        "-DPURE_HASKELL=0",
+        #
+        "-package",
+        "ghc-prim",
+        #
+        "-this-unit-id",
+        "bytestring",
+    ],
+    visibility = ["PUBLIC"],
+    deps = [
+        ":base",
+        ":deepseq",
+        ":ghc-prim",
+        ":template-haskell",
+        ":bytestring_cbits",
     ],
 )
 
