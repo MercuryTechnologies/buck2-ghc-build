@@ -146,6 +146,8 @@ cp $(location :primop-vector-tycons.hs-incl) ../out/primop_headers
 ''',
 )
 
+### ghc-prim
+
 genrule(
     name = "GHC/Prim.hs",
     srcs = [":primops.txt"],
@@ -188,8 +190,27 @@ haskell_library(
     ],
     visibility = ["PUBLIC"],
     deps = [
+        #":rts",
     ],
 )
+
+### rts
+
+#cxx_library(
+#    name = "rts",
+#    srcs = [
+#    ],
+#    headers = [
+#    ],
+#    compiler_flags = [
+#    ],
+#    link_style = "shared",
+#    deps = [
+#    ],
+#    visibility = ["PUBLIC"],
+#)
+
+### ghc-bignum
 
 haskell_library(
     name = "ghc-bignum",
@@ -223,6 +244,8 @@ haskell_library(
         ":ghc-prim",
     ],
 )
+
+### ghc-internal
 
 [ genrule(
     name = nm,
@@ -533,8 +556,11 @@ haskell_library(
     deps = [
         ":ghc-prim",
         ":ghc-bignum",
+        #":rts",
     ],
 )
+
+### base
 
 [ genrule(
     name = nm,
@@ -558,7 +584,6 @@ echo $PATH > /dev/stderr
   for nm, srcfile in [
     ("System/CPUTime.hs", "System/CPUTime.hsc"),
     ("System/CPUTime/Posix/RUsage.hs", "System/CPUTime/Posix/RUsage.hsc")
-    #("System/CPUTime.hs", "System/CPUTime.hsc")
   ]
 ]
 
@@ -818,6 +843,8 @@ haskell_library(
     ],
 )
 
+### array
+
 haskell_library(
     name = "array",
     use_same_package_name = True,
@@ -861,6 +888,8 @@ haskell_library(
     ],
 )
 
+### deepseq
+
 haskell_library(
     name = "deepseq",
     srcs = [
@@ -891,6 +920,8 @@ haskell_library(
     ],
 )
 
+### pretty
+
 haskell_library(
     name = "pretty",
     use_same_package_name = True,
@@ -918,6 +949,8 @@ haskell_library(
         ":ghc-prim",
     ],
 )
+
+### ghc-boot-th
 
 haskell_library(
     name = "ghc-boot-th",
