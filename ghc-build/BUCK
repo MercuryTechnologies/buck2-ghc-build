@@ -240,7 +240,7 @@ haskell_library(
     cmd = '''
 export PATH=/nix/store/sa6hywsm1mqfyd1xakyzv4ljjsb3hawh-clang-wrapper-11.1.0/bin:$PATH
 echo $PATH > /dev/stderr
-$(exe //toolchains:hsc2hs) -Ighc/rts/include -Ighc/libraries/ghc-internal/include -I. ghc/libraries/ghc-internal/src/{} -o ../out/{}
+$(exe @toolchains//:hsc2hs) -Ighc/rts/include -Ighc/libraries/ghc-internal/include -I. ghc/libraries/ghc-internal/src/{} -o ../out/{}
 '''.format(srcfile, nm),
   )
   for nm, srcfile in [
@@ -552,7 +552,7 @@ haskell_library(
     cmd = '''
 export PATH=/nix/store/sa6hywsm1mqfyd1xakyzv4ljjsb3hawh-clang-wrapper-11.1.0/bin:$PATH
 echo $PATH > /dev/stderr
-$(exe //toolchains:hsc2hs) -Ighc/rts/include -Ighc/libraries/ghc-internal/include -I. ghc/libraries/base/src/{} -o ../out/{}
+$(exe @toolchains//:hsc2hs) -Ighc/rts/include -Ighc/libraries/ghc-internal/include -I. ghc/libraries/base/src/{} -o ../out/{}
 '''.format(srcfile, nm),
   )
   for nm, srcfile in [

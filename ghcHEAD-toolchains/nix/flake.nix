@@ -97,7 +97,7 @@
               '';
             };
           
-          hsc2hs = pkgs.haskellPackges.hsc2hs;
+          hsc2hs = pkgs.haskellPackages.hsc2hs;
 
           python = pkgs.python3;
         };
