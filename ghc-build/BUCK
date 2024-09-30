@@ -150,7 +150,7 @@ cp $(location :primop-vector-tycons.hs-incl) ../out/primop_headers
 
 cxx_library(
     name = "rts",
-    srcs = glob(["ghc/rts/**/*.c"], exclude = ["ghc/rts/win32/**/*", "ghc/rts/wasm/**/*"]),
+    srcs = glob(["ghc/rts/**/*.c"], exclude = ["ghc/rts/win32/**/*", "ghc/rts/wasm/**/*", "ghc/rts/posix/ticker/**/*"]),
     headers = glob(["ghc/rts/**/*.h"], exclude = ["ghc/rts/win32/**/*", "ghc/rts/wasm/**/*"]),
     compiler_flags = [
         # for now
