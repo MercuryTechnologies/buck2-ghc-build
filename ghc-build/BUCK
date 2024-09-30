@@ -160,10 +160,14 @@ $(hc) -c {} -o ../out/{} -Ighc-build -Ighc-build/include -Ighc-build/ghc/rts -Ig
   )
   for obj, src, deps in [
     ("Apply.o", "ghc/rts/Apply.cmm", []),
+    ("Compact.o", "ghc/rts/Compact.cmm", ["ghc/rts/sm/ShouldCompact.h"]),
+    ("ContinuationOps.o", "ghc/rts/ContinuationOps.cmm", []),
     ("Exception.o", "ghc/rts/Exception.cmm", ["ghc/rts/RaiseAsync.h"]),
     ("HeapStackCheck.o", "ghc/rts/HeapStackCheck.cmm", ["ghc/rts/BeginPrivate.h", "ghc/rts/EndPrivate.h", "ghc/rts/SMPClosureOps.h", "ghc/rts/Updates.h"]),
     ("PrimOps.o", "ghc/rts/PrimOps.cmm", ["ghc/rts/BeginPrivate.h", "ghc/rts/EndPrivate.h", "ghc/rts/SMPClosureOps.h"]),
     ("StgMiscClosures.o", "ghc/rts/StgMiscClosures.cmm", []),
+    ("StgStartup.o", "ghc/rts/StgStartup.cmm", []),
+    ("StgStdThunks.o", "ghc/rts/StgStdThunks.cmm", ["ghc/rts/Updates.h"]),
     ("Updates.o", "ghc/rts/Updates.cmm", ["ghc/rts/Updates.h"]),
   ]
 ]
@@ -204,17 +208,25 @@ cxx_library(
     link_style = "shared",
     linker_flags = [
         "$(location :Apply.o)",
+        "$(location :Compact.o)",
+        "$(location :ContinuationOps.o)",
         "$(location :HeapStackCheck.o)",
         "$(location :PrimOps.o)",
         "$(location :StgMiscClosures.o)",
+        "$(location :StgStartup.o)",
+        "$(location :StgStdThunks.o)",
         "$(location :Updates.o)",
         "$(location :Exception.o)",
     ],
     deps = [
         ":Apply.o",
+        ":Compact.o",
+        ":ContinuationOps.o",
         ":HeapStackCheck.o",
         ":PrimOps.o",
         ":StgMiscClosures.o",
+        ":StgStartup.o",
+        ":StgStdThunks.o",
         ":Updates.o",
         ":Exception.o",
     ],
