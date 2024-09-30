@@ -1,4 +1,5 @@
 load("//haskell:defs.bzl", "default_ghc_flags")
+load("@prelude//decls/toolchains_common.bzl", "toolchains_common")
 
 genrule(
     name = "GHC_Parser_Lexer_hs",
@@ -55,6 +56,20 @@ haskell_binary(
     deps = [
         "//haskell:array",
         "//haskell:base",
+    ],
+)
+
+haskell_binary(
+    name = "genapply",
+    srcs = [
+        "ghc/utils/genapply/Main.hs",
+    ],
+    visibility = ["PUBLIC"],
+    compiler_flags = ["-O0"],
+    srcs_envs = {},
+    deps = [
+        "//haskell:base",
+        "//haskell:pretty",
     ],
 )
 
@@ -146,6 +161,121 @@ cp $(location :primop-vector-tycons.hs-incl) ../out/primop_headers
 ''',
 )
 
+### rts
+
+genrule(
+    name = "AutoApply.cmm",
+    srcs = ["include/DerivedConstants.h"],
+    out = "AutoApply.cmm",
+    cmd = "$(location :genapply) include/DerivedConstants.h > ../out/AutoApply.cmm",
+)
+
+[
+  haskell_genrule(
+      name = obj,
+      srcs = [src] + deps,
+      out = obj,
+      cmd = '''
+$(hc) -c {} -o ../out/{} -Ighc-build -Ighc-build/include -Ighc-build/ghc/rts -Ighc-build/ghc/rts/include
+'''.format(src,obj) ,
+  )
+  for obj, src, deps in [
+    ("Apply.o", "ghc/rts/Apply.cmm", []),
+    ("Compact.o", "ghc/rts/Compact.cmm", ["ghc/rts/sm/ShouldCompact.h"]),
+    ("ContinuationOps.o", "ghc/rts/ContinuationOps.cmm", []),
+    ("Exception.o", "ghc/rts/Exception.cmm", ["ghc/rts/RaiseAsync.h"]),
+    ("HeapStackCheck.o", "ghc/rts/HeapStackCheck.cmm", ["ghc/rts/BeginPrivate.h", "ghc/rts/EndPrivate.h", "ghc/rts/SMPClosureOps.h", "ghc/rts/Updates.h"]),
+    ("PrimOps.o", "ghc/rts/PrimOps.cmm", ["ghc/rts/BeginPrivate.h", "ghc/rts/EndPrivate.h", "ghc/rts/SMPClosureOps.h"]),
+    ("StgMiscClosures.o", "ghc/rts/StgMiscClosures.cmm", []),
+    ("StgStartup.o", "ghc/rts/StgStartup.cmm", []),
+    ("StgStdThunks.o", "ghc/rts/StgStdThunks.cmm", ["ghc/rts/Updates.h"]),
+    ("Updates.o", "ghc/rts/Updates.cmm", ["ghc/rts/Updates.h"]),
+  ]
+]
+
+haskell_genrule(
+    name = "AutoApply.o",
+    srcs = [":AutoApply.cmm", "ghc/rts/AutoApply.h"],
+    out = "AutoApply.o",
+    cmd = '''
+$(hc) -c $(location :AutoApply.cmm) -o ../out/AutoApply.o -I./ghc/rts
+'''
+)
+
+cxx_library(
+    name = "rts",
+    srcs = glob(["ghc/rts/**/*.c"], exclude = [
+        "ghc/rts/win32/**/*",
+        "ghc/rts/wasm/**/*",
+        "ghc/rts/posix/ticker/**/*",
+        "ghc/rts/adjustor/NativeAmd64Mingw.c",
+        "ghc/rts/adjustor/NativeAmd64.c",
+        "ghc/rts/adjustor/Nativei386.c",
+    ]),
+    headers = glob(["ghc/rts/**/*.h"], exclude = ["ghc/rts/win32/**/*", "ghc/rts/wasm/**/*"]),
+    compiler_flags = [
+        # for now
+        "--target=arm64-apple-darwin",
+        "-Ddarwin_HOST_OS",
+        "-DBuildArch=\"aarch64\"",
+        "-DBuildOS=\"dummy\"",
+        "-DBuildPlatform=\"dummy\"",
+        "-DBuildVendor=\"dummy\"",
+        "-DHostArch=\"aarch64\"",
+        "-DHostOS=\"dummy\"",
+        "-DHostPlatform=\"dummy\"",
+        "-DHostVendor=\"dummy\"",
+        "-DTargetArch=\"aarch64\"",
+        "-DTargetOS=\"dummy\"",
+        "-DTargetPlatform=\"dummy\"",
+        "-DTargetVendor=\"dummy\"",
+        "-DProjectVersion=\"000\"",
+        "-DRtsWay=\"rts_dyn\"",
+        "-DGhcUnregisterised=\"NO\"",
+        "-DTablesNextToCode=\"dummy\"",
+        "-I/nix/store/m2ci1q4vy264dp2j7fj0rd847k2gs4y4-libffi-3.4.4-dev/include",
+        "-I/nix/store/ylzhyqf98cfpib8abcq8ilnb4i8pk5c5-epoll-shim-0.0.20230411/include/libepoll-shim",
+        "-I",
+        "-I./ghc-buid",
+        "-Ighc-build",
+        "-Ighc-build/include",
+        "-Ighc-build/ghc/rts",
+        "-Ighc-build/ghc/rts/include",
+    ],
+    link_style = "shared",
+    linker_flags = [
+        "$(location :Apply.o)",
+        "$(location :AutoApply.o)",
+        "$(location :Compact.o)",
+        "$(location :ContinuationOps.o)",
+        "$(location :HeapStackCheck.o)",
+        "$(location :PrimOps.o)",
+        "$(location :StgMiscClosures.o)",
+        "$(location :StgStartup.o)",
+        "$(location :StgStdThunks.o)",
+        "$(location :Updates.o)",
+        "$(location :Exception.o)",
+        "-undefined",
+        "dynamic_lookup",
+    ],
+    deps = [
+        ":Apply.o",
+        ":AutoApply.o",
+        ":Compact.o",
+        ":ContinuationOps.o",
+        ":HeapStackCheck.o",
+        ":PrimOps.o",
+        ":StgMiscClosures.o",
+        ":StgStartup.o",
+        ":StgStdThunks.o",
+        ":Updates.o",
+        ":Exception.o",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+### ghc-prim
+
 genrule(
     name = "GHC/Prim.hs",
     srcs = [":primops.txt"],
@@ -188,8 +318,12 @@ haskell_library(
     ],
     visibility = ["PUBLIC"],
     deps = [
+        # until we fix linux build, this is commented out.
+        #":rts",
     ],
 )
+
+### ghc-bignum
 
 haskell_library(
     name = "ghc-bignum",
@@ -223,6 +357,8 @@ haskell_library(
         ":ghc-prim",
     ],
 )
+
+### ghc-internal
 
 [ genrule(
     name = nm,
@@ -533,8 +669,11 @@ haskell_library(
     deps = [
         ":ghc-prim",
         ":ghc-bignum",
+        #":rts",
     ],
 )
+
+### base
 
 [ genrule(
     name = nm,
@@ -559,7 +698,6 @@ $(exe //toolchains:hsc2hs) -Ighc/rts/include -Ighc/libraries/ghc-internal/includ
     ("System/CPUTime.hs", "System/CPUTime.hsc"),
     ("System/CPUTime/Posix/ClockGetTime.hs", "System/CPUTime/Posix/ClockGetTime.hsc"),
     ("System/CPUTime/Posix/RUsage.hs", "System/CPUTime/Posix/RUsage.hsc")
-    #("System/CPUTime.hs", "System/CPUTime.hsc")
   ]
 ]
 
@@ -820,6 +958,8 @@ haskell_library(
     ],
 )
 
+### array
+
 haskell_library(
     name = "array",
     use_same_package_name = True,
@@ -863,6 +1003,8 @@ haskell_library(
     ],
 )
 
+### deepseq
+
 haskell_library(
     name = "deepseq",
     srcs = [
@@ -893,6 +1035,8 @@ haskell_library(
     ],
 )
 
+### pretty
+
 haskell_library(
     name = "pretty",
     use_same_package_name = True,
@@ -920,6 +1064,8 @@ haskell_library(
         ":ghc-prim",
     ],
 )
+
+### ghc-boot-th
 
 haskell_library(
     name = "ghc-boot-th",
@@ -1306,7 +1452,7 @@ haskell_library(
         "//haskell:exceptions",
         "//haskell:filepath",
         "//haskell:ghc-boot",
-        "//haskell:os-string",
+        #"//haskell:os-string",
         "//haskell:time",
         "//haskell:transformers",
         "//haskell:unix",

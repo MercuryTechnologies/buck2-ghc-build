@@ -123,6 +123,7 @@ def _nix_cxx_toolchain(ctx: AnalysisContext) -> list[Provider]:
             llvm_link = llvm_link,
         ),
         CxxPlatformInfo(name = "aarch64" if host_info().arch.is_aarch64 else "x86_64"),
+        TemplatePlaceholderInfo(unkeyed_variables ={"cxx": compiler}),
     ]
 
 nix_cxx_toolchain = rule(

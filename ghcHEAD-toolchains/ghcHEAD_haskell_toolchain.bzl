@@ -118,6 +118,13 @@ def _ghcHEAD_haskell_toolchain_impl(ctx: AnalysisContext) -> list[Provider]:
         HaskellPlatformInfo(
             name = host_info().arch,
         ),
+        TemplatePlaceholderInfo(
+            unkeyed_variables = {
+                "hc": ghc,
+                "hc-pkg": ghc_pkg,
+                "haddock": haddock,
+            },
+        ),
     ]
 
 ghcHEAD_haskell_toolchain = rule(
