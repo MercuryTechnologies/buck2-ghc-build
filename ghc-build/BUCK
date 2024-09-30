@@ -163,6 +163,13 @@ cp $(location :primop-vector-tycons.hs-incl) ../out/primop_headers
 
 ### rts
 
+genrule(
+    name = "AutoApply.cmm",
+    srcs = ["include/DerivedConstants.h"],
+    out = "AutoApply.cmm",
+    cmd = "$(location :genapply) include/DerivedConstants.h > ../out/AutoApply.cmm",
+)
+
 [
   haskell_genrule(
       name = obj,
@@ -185,6 +192,15 @@ $(hc) -c {} -o ../out/{} -Ighc-build -Ighc-build/include -Ighc-build/ghc/rts -Ig
     ("Updates.o", "ghc/rts/Updates.cmm", ["ghc/rts/Updates.h"]),
   ]
 ]
+
+haskell_genrule(
+    name = "AutoApply.o",
+    srcs = [":AutoApply.cmm", "ghc/rts/AutoApply.h"],
+    out = "AutoApply.o",
+    cmd = '''
+$(hc) -c $(location :AutoApply.cmm) -o ../out/AutoApply.o -I./ghc/rts
+'''
+)
 
 cxx_library(
     name = "rts",
@@ -222,6 +238,7 @@ cxx_library(
     link_style = "shared",
     linker_flags = [
         "$(location :Apply.o)",
+        "$(location :AutoApply.o)",
         "$(location :Compact.o)",
         "$(location :ContinuationOps.o)",
         "$(location :HeapStackCheck.o)",
@@ -234,6 +251,7 @@ cxx_library(
     ],
     deps = [
         ":Apply.o",
+        ":AutoApply.o",
         ":Compact.o",
         ":ContinuationOps.o",
         ":HeapStackCheck.o",
