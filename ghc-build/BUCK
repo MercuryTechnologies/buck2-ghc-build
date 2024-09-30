@@ -1,4 +1,5 @@
 load("//haskell:defs.bzl", "default_ghc_flags")
+load("@prelude//decls/toolchains_common.bzl", "toolchains_common")
 
 genrule(
     name = "GHC_Parser_Lexer_hs",
@@ -148,6 +149,17 @@ cp $(location :primop-vector-tycons.hs-incl) ../out/primop_headers
 
 ### rts
 
+haskell_genrule(
+    name = "cmm_compiled/Updates.o",
+    srcs = ["ghc/rts/Updates.cmm"],
+    out = "Updates.o",
+    cmd = '''
+mkdir ../out/cmm_compiled
+$(hc) -c ghc/rts/Updates.cmm -o ../out/cmm_compiled/Updates.o
+''',
+)
+# $(hc) $(compiler)
+
 cxx_library(
     name = "rts",
     srcs = glob(["ghc/rts/**/*.c"], exclude = ["ghc/rts/win32/**/*", "ghc/rts/wasm/**/*", "ghc/rts/posix/ticker/**/*"]),
@@ -169,8 +181,8 @@ cxx_library(
         "-DTargetPlatform=\"dummy\"",
         "-DTargetVendor=\"dummy\"",
         "-DProjectVersion=\"000\"",
-        "-DRtsWay=\"dyn\"",
-        "-DGhcUnregisterised=\"dummy\"",
+        "-DRtsWay=\"rts_dyn\"",
+        "-DGhcUnregisterised=\"NO\"",
         "-DTablesNextToCode=\"dummy\"",
         "-I/nix/store/m2ci1q4vy264dp2j7fj0rd847k2gs4y4-libffi-3.4.4-dev/include",
         "-I/nix/store/ylzhyqf98cfpib8abcq8ilnb4i8pk5c5-epoll-shim-0.0.20230411/include/libepoll-shim",
