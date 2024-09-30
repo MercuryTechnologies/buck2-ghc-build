@@ -59,6 +59,20 @@ haskell_binary(
     ],
 )
 
+haskell_binary(
+    name = "genapply",
+    srcs = [
+        "ghc/utils/genapply/Main.hs",
+    ],
+    visibility = ["PUBLIC"],
+    compiler_flags = ["-O0"],
+    srcs_envs = {},
+    deps = [
+        "//haskell:base",
+        "//haskell:pretty",
+    ],
+)
+
 genrule(
     name = "GHC_Platform_Constants_hs",
     srcs = [],
@@ -1408,7 +1422,7 @@ haskell_library(
         "//haskell:exceptions",
         "//haskell:filepath",
         "//haskell:ghc-boot",
-        "//haskell:os-string",
+        #"//haskell:os-string",
         "//haskell:time",
         "//haskell:transformers",
         "//haskell:unix",
