@@ -82,6 +82,13 @@ nix.rules.flake(
 )
 
 nix.rules.flake(
+    name = "hsc2hs",
+    binary = "hsc2hs",
+    flake = "nix",
+    visibility = ["PUBLIC"],
+)
+
+nix.rules.flake(
     name = "python",
     flake = "nix",
     binary = "python",
