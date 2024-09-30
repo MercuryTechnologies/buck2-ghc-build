@@ -73,7 +73,12 @@
               name = "buck2-cxx";
               dontUnpack = true;
               dontCheck = true;
-              nativeBuildInputs = [ pkgs.makeWrapper ];
+              nativeBuildInputs = [
+                pkgs.makeWrapper
+                # for now (likely needed only for darwin)
+                pkgs.libffi
+                pkgs.epoll-shim
+              ];
               buildPhase = ''
                 function capture_env() {
                     # variables to export, all variables with names beginning with one of these are exported

@@ -146,6 +146,47 @@ cp $(location :primop-vector-tycons.hs-incl) ../out/primop_headers
 ''',
 )
 
+### rts
+
+cxx_library(
+    name = "rts",
+    srcs = glob(["ghc/rts/**/*.c"], exclude = ["ghc/rts/win32/**/*", "ghc/rts/wasm/**/*"]),
+    headers = glob(["ghc/rts/**/*.h"], exclude = ["ghc/rts/win32/**/*", "ghc/rts/wasm/**/*"]),
+    compiler_flags = [
+        # for now
+        "--target=arm64-apple-darwin",
+        "-Ddarwin_HOST_OS",
+        "-DBuildArch=\"aarch64\"",
+        "-DBuildOS=\"dummy\"",
+        "-DBuildPlatform=\"dummy\"",
+        "-DBuildVendor=\"dummy\"",
+        "-DHostArch=\"aarch64\"",
+        "-DHostOS=\"dummy\"",
+        "-DHostPlatform=\"dummy\"",
+        "-DHostVendor=\"dummy\"",
+        "-DTargetArch=\"aarch64\"",
+        "-DTargetOS=\"dummy\"",
+        "-DTargetPlatform=\"dummy\"",
+        "-DTargetVendor=\"dummy\"",
+        "-DProjectVersion=\"000\"",
+        "-DRtsWay=\"dyn\"",
+        "-DGhcUnregisterised=\"dummy\"",
+        "-DTablesNextToCode=\"dummy\"",
+        "-I/nix/store/m2ci1q4vy264dp2j7fj0rd847k2gs4y4-libffi-3.4.4-dev/include",
+        "-I/nix/store/ylzhyqf98cfpib8abcq8ilnb4i8pk5c5-epoll-shim-0.0.20230411/include/libepoll-shim",
+        "-I",
+        "-I./ghc-buid",
+        "-Ighc-build",
+        "-Ighc-build/include",
+        "-Ighc-build/ghc/rts",
+        "-Ighc-build/ghc/rts/include",
+    ],
+    link_style = "shared",
+    deps = [
+    ],
+    visibility = ["PUBLIC"],
+)
+
 ### ghc-prim
 
 genrule(
@@ -193,22 +234,6 @@ haskell_library(
         #":rts",
     ],
 )
-
-### rts
-
-#cxx_library(
-#    name = "rts",
-#    srcs = [
-#    ],
-#    headers = [
-#    ],
-#    compiler_flags = [
-#    ],
-#    link_style = "shared",
-#    deps = [
-#    ],
-#    visibility = ["PUBLIC"],
-#)
 
 ### ghc-bignum
 
