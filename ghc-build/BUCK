@@ -204,7 +204,14 @@ $(hc) -c $(location :AutoApply.cmm) -o ../out/AutoApply.o -I./ghc/rts
 
 cxx_library(
     name = "rts",
-    srcs = glob(["ghc/rts/**/*.c"], exclude = ["ghc/rts/win32/**/*", "ghc/rts/wasm/**/*", "ghc/rts/posix/ticker/**/*", "ghc/rts/adjustor/*",]),
+    srcs = glob(["ghc/rts/**/*.c"], exclude = [
+        "ghc/rts/win32/**/*",
+        "ghc/rts/wasm/**/*",
+        "ghc/rts/posix/ticker/**/*",
+        "ghc/rts/adjustor/NativeAmd64Mingw.c",
+        "ghc/rts/adjustor/NativeAmd64.c",
+        "ghc/rts/adjustor/Nativei386.c",
+    ]),
     headers = glob(["ghc/rts/**/*.h"], exclude = ["ghc/rts/win32/**/*", "ghc/rts/wasm/**/*"]),
     compiler_flags = [
         # for now
@@ -248,6 +255,8 @@ cxx_library(
         "$(location :StgStdThunks.o)",
         "$(location :Updates.o)",
         "$(location :Exception.o)",
+        "-undefined",
+        "dynamic_lookup",
     ],
     deps = [
         ":Apply.o",
@@ -309,7 +318,7 @@ haskell_library(
     ],
     visibility = ["PUBLIC"],
     deps = [
-        #":rts",
+        ":rts",
     ],
 )
 
