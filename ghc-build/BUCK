@@ -5,8 +5,7 @@ genrule(
     name = "GHC_Parser_Lexer_hs",
     srcs = ["ghc/compiler/GHC/Parser/Lexer.x"],
     out = "Lexer.hs",
-    # for now
-    cmd = "/nix/store/jj4m13397jmhg3q0wvlrzc3n0gvbfwks-alex-3.3.0.0/bin/alex ghc/compiler/GHC/Parser/Lexer.x -o ../out/Lexer.hs",
+    cmd = "$(exe @toolchains//:alex) ghc/compiler/GHC/Parser/Lexer.x -o ../out/Lexer.hs",
 )
 
 haskell_binary(
@@ -28,16 +27,14 @@ genrule(
     name = "genprimopcode_Lexer_hs",
     srcs = ["ghc/utils/genprimopcode/Lexer.x"],
     out = "Lexer.hs",
-    # for now
-    cmd = "/nix/store/jj4m13397jmhg3q0wvlrzc3n0gvbfwks-alex-3.3.0.0/bin/alex ghc/utils/genprimopcode/Lexer.x -o ../out/Lexer.hs",
+    cmd = "$(exe @toolchains//:alex) ghc/utils/genprimopcode/Lexer.x -o ../out/Lexer.hs",
 )
 
 genrule(
     name = "genprimopcode_Parser_hs",
     srcs = ["ghc/utils/genprimopcode/Parser.y"],
     out = "Parser.hs",
-    # for now
-    cmd = "/nix/store/fmy4cc70xj6hdd6g8rcqm65rfgwnxbrl-happy-1.20.1.1/bin/happy ghc/utils/genprimopcode/Parser.y -o ../out/Parser.hs",
+    cmd = "$(exe @toolchains//:happy) ghc/utils/genprimopcode/Parser.y -o ../out/Parser.hs",
 )
 
 haskell_binary(
@@ -372,10 +369,7 @@ haskell_library(
         "ghc/rts/**/*",
     ]),
     out = nm,
-    # for now, all hard-coded paths.
     cmd = '''
-export PATH=/nix/store/sa6hywsm1mqfyd1xakyzv4ljjsb3hawh-clang-wrapper-11.1.0/bin:$PATH
-echo $PATH > /dev/stderr
 $(exe @toolchains//:hsc2hs) -Ighc/rts/include -Ighc/libraries/ghc-internal/include -I. ghc/libraries/ghc-internal/src/{} -o ../out/{}
 '''.format(srcfile, nm),
   )
@@ -687,10 +681,7 @@ haskell_library(
         "ghc/rts/**/*",
     ]),
     out = nm,
-    # for now, all hard-coded paths.
     cmd = '''
-export PATH=/nix/store/sa6hywsm1mqfyd1xakyzv4ljjsb3hawh-clang-wrapper-11.1.0/bin:$PATH
-echo $PATH > /dev/stderr
 $(exe @toolchains//:hsc2hs) -Ighc/rts/include -Ighc/libraries/ghc-internal/include -I. ghc/libraries/base/src/{} -o ../out/{}
 '''.format(srcfile, nm),
   )

@@ -63,6 +63,8 @@
           inherit ghcWithPackages haddock haskellPackages;
           inherit (hsPkgs) ghc;
 
+          alex = pkgs.alex;
+
           bash = pkgs.writeShellScriptBin "bash" ''
             export PATH='${ pkgs.lib.makeSearchPath "bin" buck2BuildInputs }'
             exec "$BASH" "$@"
@@ -113,6 +115,7 @@
                 makeWrapper "$NIX_CC/bin/$CXX" "$out/bin/c++" "''${MAPFILE[@]}"
               '';
             };
+          happy = pkgs.happy;
           hsc2hs = pkgs.haskellPackages.hsc2hs;
           python = pkgs.python3;
         };

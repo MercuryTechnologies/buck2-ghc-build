@@ -54,6 +54,13 @@ ghci(
 ################################################################################
 
 nix.rules.flake(
+    name = "alex",
+    binary = "alex",
+    flake = "nix",
+    visibility = ["PUBLIC"],
+)
+
+nix.rules.flake(
     name = "bash",
     binary = "bash",
     flake = "nix",
@@ -73,6 +80,13 @@ nix.rules.flake(
     package = "cxx",
     flake = "nix",
     binaries = ["ar", "cc", "c++", "nm", "objcopy", "ranlib", "strip"],
+)
+
+nix.rules.flake(
+    name = "happy",
+    binary = "happy",
+    flake = "nix",
+    visibility = ["PUBLIC"],
 )
 
 nix.rules.flake(
