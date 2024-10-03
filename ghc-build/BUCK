@@ -200,7 +200,7 @@ $(hc) -c $(location :AutoApply.cmm) -o ../out/AutoApply.o -fPIC -I./ghc/rts
 )
 
 includeFlags = [
-    "-I/nix/store/m2ci1q4vy264dp2j7fj0rd847k2gs4y4-libffi-3.4.4-dev/include",
+    "-I$(location @toolchains//:libffi)/include",
     "-I/nix/store/ylzhyqf98cfpib8abcq8ilnb4i8pk5c5-epoll-shim-0.0.20230411/include/libepoll-shim",
     "-I",
     "-I./ghc-buid",
@@ -226,7 +226,6 @@ cxx_library(
     compiler_flags = select({
         "@prelude//os:linux": [
             # for now
-            #"--target=x86_64-unknown-linux",
             "-fPIC",
             "-Dlinux_HOST_OS",
             "-DUSE_MINIINTERPRETER",
@@ -247,13 +246,9 @@ cxx_library(
             "-DRtsWay=\"rts_dyn\"",
             "-DGhcUnregisterised=\"NO\"",
             "-DTablesNextToCode=\"dummy\"",
-            "-DOBJFORMAT_ELF",
-            "-I/nix/store/hp2gy863515lcv0gv8773yj2364ipfiz-libffi-3.4.4-dev/include",
-            "-Wl,-u,StgRun",
           ] + includeFlags,
         "@prelude//os:macos": [
             # for now
-            "--target=arm64-apple-darwin",
             "-Ddarwin_HOST_OS",
             "-DUSE_MINIINTERPRETER",
             "-DBuildArch=\"aarch64\"",

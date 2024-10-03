@@ -89,3 +89,10 @@ nix.rules.flake(
 )
 
 ################################################################################
+
+nix.rules.flake(
+    name = "libffi",
+    flake = "nix",
+    suffix = "dev",
+    visibility = ["PUBLIC"],
+)

@@ -69,9 +69,6 @@
             pkgs.buck2-source
             pkgs.nix
             pkgs.jq
-            # REMOVE LATER
-            pkgs.alex
-            pkgs.libffi.dev
           ];
           # GHC in invokes Nix cc, cc-wrapper invokes mktemp from $PATH. Also GHC invokes otool and
           # install_name_tool from $PATH on Darwin.
