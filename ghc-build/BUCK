@@ -351,8 +351,7 @@ haskell_library(
     ],
     visibility = ["PUBLIC"],
     deps = [
-        # until we fix linux build, this is commented out.
-        #":rts",
+        ":rts",
     ],
 )
 
