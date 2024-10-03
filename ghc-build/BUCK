@@ -173,7 +173,7 @@ genrule(
       srcs = [src] + deps,
       out = obj,
       cmd = '''
-$(hc) -c {} -o ../out/{} -Ighc-build -Ighc-build/include -Ighc-build/ghc/rts -Ighc-build/ghc/rts/include
+$(hc) -fPIC -dynamic -c {} -o ../out/{} -Ighc-build -Ighc-build/include -Ighc-build/ghc/rts -Ighc-build/ghc/rts/include
 '''.format(src,obj) ,
   )
   for obj, src, deps in [
@@ -195,9 +195,20 @@ haskell_genrule(
     srcs = [":AutoApply.cmm", "ghc/rts/AutoApply.h"],
     out = "AutoApply.o",
     cmd = '''
-$(hc) -c $(location :AutoApply.cmm) -o ../out/AutoApply.o -I./ghc/rts
+$(hc) -c $(location :AutoApply.cmm) -o ../out/AutoApply.o -fPIC -I./ghc/rts
 '''
 )
+
+includeFlags = [
+    "-I/nix/store/m2ci1q4vy264dp2j7fj0rd847k2gs4y4-libffi-3.4.4-dev/include",
+    "-I/nix/store/ylzhyqf98cfpib8abcq8ilnb4i8pk5c5-epoll-shim-0.0.20230411/include/libepoll-shim",
+    "-I",
+    "-I./ghc-buid",
+    "-Ighc-build",
+    "-Ighc-build/include",
+    "-Ighc-build/ghc/rts",
+    "-Ighc-build/ghc/rts/include",
+]
 
 cxx_library(
     name = "rts",
@@ -208,37 +219,59 @@ cxx_library(
         "ghc/rts/adjustor/NativeAmd64Mingw.c",
         "ghc/rts/adjustor/NativeAmd64.c",
         "ghc/rts/adjustor/Nativei386.c",
+        "ghc/rts/linker/MachO.*",
+        "ghc/rts/linker/macho/**",
     ]),
     headers = glob(["ghc/rts/**/*.h"], exclude = ["ghc/rts/win32/**/*", "ghc/rts/wasm/**/*"]),
-    compiler_flags = [
-        # for now
-        "--target=arm64-apple-darwin",
-        "-Ddarwin_HOST_OS",
-        "-DBuildArch=\"aarch64\"",
-        "-DBuildOS=\"dummy\"",
-        "-DBuildPlatform=\"dummy\"",
-        "-DBuildVendor=\"dummy\"",
-        "-DHostArch=\"aarch64\"",
-        "-DHostOS=\"dummy\"",
-        "-DHostPlatform=\"dummy\"",
-        "-DHostVendor=\"dummy\"",
-        "-DTargetArch=\"aarch64\"",
-        "-DTargetOS=\"dummy\"",
-        "-DTargetPlatform=\"dummy\"",
-        "-DTargetVendor=\"dummy\"",
-        "-DProjectVersion=\"000\"",
-        "-DRtsWay=\"rts_dyn\"",
-        "-DGhcUnregisterised=\"NO\"",
-        "-DTablesNextToCode=\"dummy\"",
-        "-I/nix/store/m2ci1q4vy264dp2j7fj0rd847k2gs4y4-libffi-3.4.4-dev/include",
-        "-I/nix/store/ylzhyqf98cfpib8abcq8ilnb4i8pk5c5-epoll-shim-0.0.20230411/include/libepoll-shim",
-        "-I",
-        "-I./ghc-buid",
-        "-Ighc-build",
-        "-Ighc-build/include",
-        "-Ighc-build/ghc/rts",
-        "-Ighc-build/ghc/rts/include",
-    ],
+    compiler_flags = select({
+        "@prelude//os:linux": [
+            # for now
+            #"--target=x86_64-unknown-linux",
+            "-fPIC",
+            "-Dlinux_HOST_OS",
+            "-DHAVE_PTHREAD_SETNAME_NP",
+            "-DBuildArch=\"ArchX86_64\"",
+            "-DBuildOS=\"dummy\"",
+            "-DBuildPlatform=\"dummy\"",
+            "-DBuildVendor=\"dummy\"",
+            "-DHostArch=\"ArchX86_64\"",
+            "-DHostOS=\"dummy\"",
+            "-DHostPlatform=\"dummy\"",
+            "-DHostVendor=\"dummy\"",
+            "-DTargetArch=\"ArchX86_64\"",
+            "-DTargetOS=\"dummy\"",
+            "-DTargetPlatform=\"dummy\"",
+            "-DTargetVendor=\"dummy\"",
+            "-DProjectVersion=\"000\"",
+            "-DRtsWay=\"rts_dyn\"",
+            "-DGhcUnregisterised=\"NO\"",
+            "-DTablesNextToCode=\"dummy\"",
+            "-DOBJFORMAT_ELF",
+            "-I/nix/store/hp2gy863515lcv0gv8773yj2364ipfiz-libffi-3.4.4-dev/include",
+            "-Wl,-u,StgRun",
+          ] + includeFlags,
+        "@prelude//os:macos": [
+            # for now
+            "--target=arm64-apple-darwin",
+            "-Ddarwin_HOST_OS",
+            "-DBuildArch=\"aarch64\"",
+            "-DBuildOS=\"dummy\"",
+            "-DBuildPlatform=\"dummy\"",
+            "-DBuildVendor=\"dummy\"",
+            "-DHostArch=\"aarch64\"",
+            "-DHostOS=\"dummy\"",
+            "-DHostPlatform=\"dummy\"",
+            "-DHostVendor=\"dummy\"",
+            "-DTargetArch=\"aarch64\"",
+            "-DTargetOS=\"dummy\"",
+            "-DTargetPlatform=\"dummy\"",
+            "-DTargetVendor=\"dummy\"",
+            "-DProjectVersion=\"000\"",
+            "-DRtsWay=\"rts_dyn\"",
+            "-DGhcUnregisterised=\"NO\"",
+            "-DTablesNextToCode=\"dummy\"",
+          ] + includeFlags,
+    }),
     link_style = "shared",
     linker_flags = [
         "$(location :Apply.o)",
@@ -252,9 +285,10 @@ cxx_library(
         "$(location :StgStdThunks.o)",
         "$(location :Updates.o)",
         "$(location :Exception.o)",
-        "-undefined",
-        "dynamic_lookup",
-    ],
+    ] + select({
+        "@prelude//os:linux": ["-Wl,--unresolved-symbols=ignore-all", "-Wl,-u,StgRun"],
+        "@prelude//os:macos": ["-undefined", "dynamic_lookup"],
+    }),
     deps = [
         ":Apply.o",
         ":AutoApply.o",

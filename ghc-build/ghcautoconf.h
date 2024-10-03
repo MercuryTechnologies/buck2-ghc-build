@@ -287,8 +287,10 @@
 /* Define to 1 if you have the <string.h> header file. */
 #define HAVE_STRING_H 1
 
+#if darwin_HOST_OS
 /* Define to 1 if Apple-style dead-stripping is supported. */
 #define HAVE_SUBSECTIONS_VIA_SYMBOLS 1
+#endif
 
 /* Define to 1 if you have the `sysconf' function. */
 #define HAVE_SYSCONF 1
