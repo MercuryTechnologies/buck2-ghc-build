@@ -229,6 +229,7 @@ cxx_library(
             #"--target=x86_64-unknown-linux",
             "-fPIC",
             "-Dlinux_HOST_OS",
+            "-DUSE_MINIINTERPRETER",
             "-DHAVE_PTHREAD_SETNAME_NP",
             "-DBuildArch=\"ArchX86_64\"",
             "-DBuildOS=\"dummy\"",
@@ -254,6 +255,7 @@ cxx_library(
             # for now
             "--target=arm64-apple-darwin",
             "-Ddarwin_HOST_OS",
+            "-DUSE_MINIINTERPRETER",
             "-DBuildArch=\"aarch64\"",
             "-DBuildOS=\"dummy\"",
             "-DBuildPlatform=\"dummy\"",
