@@ -9,14 +9,18 @@ def __flake_impl(ctx: AnalysisContext, flake: Artifact, package: str, binary: st
 
     deps = [o[DefaultInfo].default_outputs[0] for o in ctx.attrs.deps]
 
-    out_link = ctx.actions.declare_output("out.link")
+    if ctx.attrs.suffix:
+        out_link = ctx.actions.declare_output("out.link-{}".format(ctx.attrs.suffix))
+    else:
+        out_link = ctx.actions.declare_output("out.link")
+
     nix_build = cmd_args([
         "env",
         "--",  # this is needed to avoid "Spawning executable `nix` failed: Failed to spawn a process"
         "nix",
         "build",
         #"--show-trace",         # for debugging
-        cmd_args("--out-link", out_link.as_output()),
+        cmd_args("--out-link", cmd_args(out_link.as_output(), parent = 1, absolute_suffix = "/out.link"), hidden = [out_link.as_output()]),
         cmd_args(cmd_args(flake, package, delimiter = "#"), absolute_prefix = "path:"),
     ])
     ctx.actions.run(nix_build, category = "nix_flake", local_only = True)
@@ -49,6 +53,7 @@ __flake = rule(
         "deps": attrs.list(attrs.dep(), default = []),
         "flake": attrs.source(allow_directory = True),
         "package": attrs.option(attrs.string(), doc = "name of the flake output, defaults to label name", default = None),
+        "suffix": attrs.option(attrs.string(), default = None),
     },
 )
 

@@ -104,6 +104,7 @@
           hsc2hs = pkgs.haskellPackages.hsc2hs;
 
           python = pkgs.python3;
+          libffi = pkgs.libffi.dev;
         };
       });
 }
