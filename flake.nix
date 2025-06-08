@@ -1,34 +1,39 @@
 {
   description = "Buck2 project template supporting both nix-based GHC env and custom GHC HEAD";
   inputs = {
-    nixpkgs.url = "github:MercuryTechnologies/nixpkgs/ghc962";
-    flake-utils.url = "github:numtide/flake-utils";
-    flake-compat = {
-      url = "github:matthewbauer/flake-compat/support-fetching-file-type-flakes";
-      flake = false;
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    flake-utils.url = "github:numtide/flake-utils/v1.0.0";
+
+    # NOTE: The buck2 tool is based on the upstream version with a few custom patches, and thus need
+    # to be compiled. Since it needs a specific version of Rust nightly compiler, we use a specific
+    # commit. We will reconcile the fenix version with other Rust-based tools later.
+    fenix = {
+      url = "github:nix-community/fenix/9d17341a4f227fe15a0bca44655736b3808e6a03";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
-    rust-overlay.url = "github:oxalica/rust-overlay";
   };
+
   outputs = inputs @ {
     self,
     nixpkgs,
     flake-utils,
-    rust-overlay,
     ...
   }:
     flake-utils.lib.eachDefaultSystem (system: let
       pkgs = import nixpkgs {
         inherit system;
-        overlays = [ rust-overlay.overlays.default ] ++ import ./toolchains/nix/overlays;
+        overlays =
+          [ inputs.fenix.overlays.default
+            (self: super:
+                { buck2-source = super.callPackage ./nix/packages/buck2-source {};
+                }
+            )
+          ];
         config = {
           allowUnfree = true;
           allowBroken = true;
         };
       };
-
-      toolchains = import toolchains/nix { inherit system; };
-
-      inherit (toolchains.packages.${system}) ghcWithPackages haddock;
 
       buck2BuildInputs = [
         pkgs.bash
@@ -41,26 +46,13 @@
       ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
         pkgs.stdenv.cc.bintools
         pkgs.darwin.cctools
+        pkgs.darwin.apple_sdk.frameworks.Security
+        pkgs.darwin.apple_sdk.frameworks.CoreFoundation
+        pkgs.darwin.apple_sdk.frameworks.SystemConfiguration
       ];
 
-      macOS-security =
-        # make `/usr/bin/security` available in `PATH`, which is needed for stack
-        # on darwin which calls this binary to find certificates
-        pkgs.writeScriptBin "security" ''exec /usr/bin/security "$@"'';
     in
     rec {
-      packages = {
-        inherit ghcWithPackages;
-        buck2-update = pkgs.writeShellApplication {
-          name = "buck2-update";
-          runtimeInputs = with pkgs; [ curl jq nix-prefetch common-updater-scripts nix coreutils ];
-
-          text = ''
-            exec "$BASH" nix/overlays/buck2/update.sh
-          '';
-        };
-      };
-
       devShells = rec {
         default = buck2;
         buck2 = pkgs.mkShell {
