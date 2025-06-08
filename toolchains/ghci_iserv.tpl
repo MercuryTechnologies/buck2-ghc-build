@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 # iserv template for GHCi
 
 # binutils_path: <binutils_path>

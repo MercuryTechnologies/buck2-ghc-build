@@ -1,9 +1,9 @@
+load(":ghci.bzl", "ghci")
+load("nix.bzl", "nix")
 load(":nix_bash_toolchain.bzl", "nix_bash_genrule_toolchain")
 load(":nix_cxx_toolchain.bzl", "nix_cxx_toolchain")
 load(":nix_haskell_toolchain.bzl", "nix_haskell_toolchain")
 load(":nix_python_toolchain.bzl", "nix_python_bootstrap_toolchain")
-load(":ghci.bzl", "ghci")
-load("nix.bzl", "nix")
 
 python_bootstrap_binary(
     name = "nix_drv_json",
@@ -37,13 +37,65 @@ nix_bash_genrule_toolchain(
     visibility = ["PUBLIC"],
 )
 
+python_bootstrap_library(
+    name = "fixup_locales_helper",
+    srcs = [
+        "fixup_locales_helper.py",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+################################################################################
+
+nix.rules.flake(
+    name = "bash",
+    binary = "bash",
+    flake = "@nix//:nix_overlays",
+)
+
+nix.rules.flake(
+    name = "ghc",
+    binaries = [
+        "ghc-pkg",
+    ],
+    binary = "ghc",
+    flake = "@nix//:nix_overlays",
+)
+
+nix.rules.flake(
+    name = "nix_cxx",
+    binaries = [
+        "ar",
+        "cc",
+        "c++",
+        "nm",
+        "objcopy",
+        "ranlib",
+        "strip",
+    ],
+    flake = "@nix//:nix_overlays",
+    package = "cxx",
+)
+
+nix.rules.flake(
+    name = "haddock",
+    binary = "haddock",
+    flake = "@nix//:nix_overlays",
+)
+
+nix.rules.flake(
+    name = "python",
+    binary = "python",
+    flake = "@nix//:nix_overlays",
+)
+
 nix_haskell_toolchain(
     name = "haskell",
-    visibility = ["PUBLIC"],
     compiler_flags = [
         "-fwrite-ide-info",
     ],
-    flake = "nix",
+    flake = "@nix//:nix_overlays",
+    visibility = ["PUBLIC"],
 )
 
 ghci(
@@ -53,59 +105,17 @@ ghci(
 
 ################################################################################
 
-nix.rules.flake(
-    name = "alex",
-    binary = "alex",
-    flake = "nix",
-    visibility = ["PUBLIC"],
-)
 
-nix.rules.flake(
-    name = "bash",
-    binary = "bash",
-    flake = "nix",
-)
+# This creates a list of nix paths corresponding to the listed buck2 target items
+# derived from nix flakes. With [upload] subtarget, those nix paths can be
+# automatically uploaded to S3 nix cache by cache-hook script.
 
-nix.rules.flake(
-    name = "ghc",
-    binaries = [
-        "ghc-pkg",
+flake_nix_paths(
+    name = "all_nix_flakes",
+    flakes = [
+        ":bash",
+        ":ghc",
+        ":nix_cxx",
+        ":python",
     ],
-    binary = "ghc",
-    flake = "nix",
 )
-
-nix.rules.flake(
-    name = "nix_cxx",
-    package = "cxx",
-    flake = "nix",
-    binaries = ["ar", "cc", "c++", "nm", "objcopy", "ranlib", "strip"],
-)
-
-nix.rules.flake(
-    name = "happy",
-    binary = "happy",
-    flake = "nix",
-    visibility = ["PUBLIC"],
-)
-
-nix.rules.flake(
-    name = "haddock",
-    flake = "nix",
-    binary = "haddock",
-)
-
-nix.rules.flake(
-    name = "hsc2hs",
-    binary = "hsc2hs",
-    flake = "nix",
-    visibility = ["PUBLIC"],
-)
-
-nix.rules.flake(
-    name = "python",
-    flake = "nix",
-    binary = "python",
-)
-
-################################################################################

@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 # template for GHCi
 
 set -eo pipefail
@@ -14,4 +13,3 @@ DIR=$(dirname "$0")
 # ghci_ghc_path: <ghci_ghc_path>
 
 exec <user_ghci_path> <package_dbs> -ghci-script "$DIR/<start_ghci>" "$DIR/<squashed_so>" "$@"
-

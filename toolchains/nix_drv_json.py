@@ -1,4 +1,3 @@
-from pathlib import Path
 import argparse
 import json
 import subprocess
@@ -23,7 +22,6 @@ def main():
             "nix",
             "eval",
             "--json",
-            #"--apply", "hs: builtins.map (h: h.drvPath) (builtins.attrValues hs)",
             "--no-update-lock-file",
             "--no-use-registries",
             args.flake,
@@ -31,7 +29,6 @@ def main():
     )
 
     drvs = json.loads(out).values()
-    #drvs = json.loads(out)
 
     subprocess.run(
         ["nix", "derivation", "show", "--stdin"],

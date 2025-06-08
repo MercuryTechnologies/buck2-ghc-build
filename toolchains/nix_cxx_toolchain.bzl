@@ -1,5 +1,3 @@
-load("@prelude//cxx:linker.bzl", "is_pdb_generated")
-load("@prelude//linking:link_info.bzl", "LinkOrdering", "LinkStyle")
 load(
     "@prelude//cxx:cxx_toolchain_types.bzl",
     "BinaryUtilitiesInfo",
@@ -8,11 +6,14 @@ load(
     "CxxPlatformInfo",
     "CxxToolchainInfo",
     "LinkerInfo",
+    "LinkerType",
     "PicBehavior",
     "ShlibInterfacesMode",
 )
-load("@prelude//linking:lto.bzl", "LtoMode")
 load("@prelude//cxx:headers.bzl", "HeaderMode")
+load("@prelude//cxx:linker.bzl", "is_pdb_generated")
+load("@prelude//linking:link_info.bzl", "LinkOrdering", "LinkStyle")
+load("@prelude//linking:lto.bzl", "LtoMode")
 
 def _nix_cxx_toolchain(ctx: AnalysisContext) -> list[Provider]:
     nix_cc = ctx.attrs.nix_cc[DefaultInfo].sub_targets
@@ -29,7 +30,7 @@ def _nix_cxx_toolchain(ctx: AnalysisContext) -> list[Provider]:
     compiler = compiler
     cxx_compiler = cxx_compiler
     linker = cxx_compiler
-    linker_type = "gnu"
+    linker_type = LinkerType("gnu")
     pic_behavior = PicBehavior("supported")
     binary_extension = ""
     object_file_extension = "o"
@@ -40,7 +41,7 @@ def _nix_cxx_toolchain(ctx: AnalysisContext) -> list[Provider]:
     additional_linker_flags = []
     if host_info().os.is_macos:
         archiver_supports_argfiles = False
-        linker_type = "darwin"
+        linker_type = LinkerType("darwin")
         pic_behavior = PicBehavior("always_enabled")
     elif host_info().os.is_windows:
         fail("not supported")
@@ -136,8 +137,7 @@ nix_cxx_toolchain = rule(
         "make_comp_db": attrs.default_only(attrs.exec_dep(providers = [RunInfo], default = "prelude//cxx/tools:make_comp_db")),
         "nix_cc": attrs.dep(
             default = "//:nix_cxx",
-        )
+        ),
     },
     is_toolchain_rule = True,
 )
- 

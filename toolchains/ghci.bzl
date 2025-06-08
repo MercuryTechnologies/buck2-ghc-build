@@ -1,8 +1,8 @@
+load("@prelude//decls/toolchains_common.bzl", "toolchains_common")
 load(
     "@prelude//haskell:toolchain.bzl",
     "HaskellToolchainInfo",
 )
-load("@prelude//decls/toolchains_common.bzl", "toolchains_common")
 
 def _ghci_impl(ctx: AnalysisContext) -> list[Provider]:
     haskell_toolchain = ctx.attrs._haskell_toolchain[HaskellToolchainInfo]
@@ -17,7 +17,7 @@ def _ghci_impl(ctx: AnalysisContext) -> list[Provider]:
     )
     return [
         DefaultInfo(out),
-        RunInfo(cmd_args(out, hidden=[haskell_toolchain.compiler])),
+        RunInfo(cmd_args(out, hidden = [haskell_toolchain.compiler])),
     ]
 
 ghci = rule(

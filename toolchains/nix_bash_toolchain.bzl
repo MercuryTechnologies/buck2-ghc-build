@@ -12,7 +12,7 @@ nix_bash_genrule_toolchain = rule(
         "bash": attrs.dep(
             providers = [RunInfo],
             default = "//:bash",
-        )
+        ),
     },
     is_toolchain_rule = True,
 )

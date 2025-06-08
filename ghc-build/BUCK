@@ -1,5 +1,6 @@
 load("//haskell:defs.bzl", "default_ghc_flags")
 load("@prelude//decls/toolchains_common.bzl", "toolchains_common")
+load("@toolchains//:haskell_genrule.bzl", "haskell_genrule")
 
 genrule(
     name = "GHC_Parser_Lexer_hs",
@@ -172,9 +173,7 @@ genrule(
       name = obj,
       srcs = [src] + deps,
       out = obj,
-      cmd = '''
-$(hc) -c {} -o ../out/{} -Ighc-build -Ighc-build/include -Ighc-build/ghc/rts -Ighc-build/ghc/rts/include
-'''.format(src,obj) ,
+      cmd = "$(hc) -c {} -o ../out/{} -Ighc-build -Ighc-build/include -Ighc-build/ghc/rts -Ighc-build/ghc/rts/include".format(src,obj),
   )
   for obj, src, deps in [
     ("Apply.o", "ghc/rts/Apply.cmm", []),
