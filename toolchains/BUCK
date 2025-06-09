@@ -37,14 +37,6 @@ nix_bash_genrule_toolchain(
     visibility = ["PUBLIC"],
 )
 
-python_bootstrap_library(
-    name = "fixup_locales_helper",
-    srcs = [
-        "fixup_locales_helper.py",
-    ],
-    visibility = ["PUBLIC"],
-)
-
 ################################################################################
 
 nix.rules.flake(
@@ -60,6 +52,13 @@ nix.rules.flake(
     ],
     binary = "ghc",
     flake = "@nix//:nix_overlays",
+)
+
+nix.rules.flake(
+    name = "hsc2hs",
+    binary = "hsc2hs",
+    flake = "@nix//:nix_overlays",
+    visibility = ["PUBLIC"],
 )
 
 nix.rules.flake(
@@ -101,21 +100,4 @@ nix_haskell_toolchain(
 ghci(
     name = "ghci",
     visibility = ["PUBLIC"],
-)
-
-################################################################################
-
-
-# This creates a list of nix paths corresponding to the listed buck2 target items
-# derived from nix flakes. With [upload] subtarget, those nix paths can be
-# automatically uploaded to S3 nix cache by cache-hook script.
-
-flake_nix_paths(
-    name = "all_nix_flakes",
-    flakes = [
-        ":bash",
-        ":ghc",
-        ":nix_cxx",
-        ":python",
-    ],
 )

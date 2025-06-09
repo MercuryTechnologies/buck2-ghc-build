@@ -317,6 +317,8 @@ haskell_library(
         # until we fix linux build, this is commented out.
         #":rts",
     ],
+    #_worker = None,
+    allow_worker = False,
 )
 
 ### ghc-bignum
